@@ -10,7 +10,16 @@
 #include <iomanip>
 #include <fstream>
 
-// Provide the definitions of the Token methods
+// TokenType utils
+bool is_literal(TokenType tok) {
+    if (tok == TokenType::IntegerLiteral) return true;
+    if (tok == TokenType::FloatLiteral) return true;
+    if (tok == TokenType::StringLiteral) return true;
+    if (tok == TokenType::BooleanLiteral) return true;
+    return false;
+}
+// ---------------
+
 std::string Token::token_type_to_string() const {
     switch (token_type) {
         case TokenType::ArithmeticOperator: return "ArithmeticOperator";

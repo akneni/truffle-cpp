@@ -1,0 +1,21 @@
+{
+    "code-block": {
+        "statements": [
+            {
+                "dst": "x",
+                "dtype": "I64",
+                "src": {
+                    "dtype": "I64",
+                    "type": "Literal",
+                    "value": "0"
+                },
+                "type": "DeclarationStatement"
+            }
+        ],
+        "type": "CodeBlock"
+    },
+    "name": "main",
+    "parameters": [],
+    "ret-type": "Null",
+    "type": "Function"
+}

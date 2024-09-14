@@ -37,7 +37,9 @@ enum class TokenType {
     NewLine,
 };
 
-// Token struct declaration
+bool is_literal(TokenType tok);
+
+
 struct Token {
     TokenType token_type;
     std::string value;

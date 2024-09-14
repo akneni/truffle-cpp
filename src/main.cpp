@@ -33,10 +33,32 @@ std::string f_read_to_string(std::string filepath) {
     return buffer.str();
 }
 
+void write_to_file(const std::string& path, const std::string& data) {
+    // Create an ofstream object to handle file output
+    std::ofstream outfile(path);
+
+    // Check if the file was opened successfully
+    if (!outfile.is_open()) {
+        std::cerr << "Error: Could not open file for writing: " << path << std::endl;
+        return;
+    }
+
+    // Write the data to the file
+    outfile << data;
+
+    // Close the file
+    outfile.close();
+
+    // Optionally, you can notify the user that the operation was successful
+    std::cout << "Data written to file: " << path << std::endl;
+}
+
 
 int main() {
     std::string source_code = f_read_to_string(std::string("truffle/main.tr"));
     Lexer lexer(source_code);
+
+    std::vector<Token> tokens = {};
 
     try {
         while (true) {
@@ -45,6 +67,7 @@ int main() {
                 break;
             }
             const Token& token = token_opt.value();
+            tokens.push_back(token);
             std::cout << token.to_string() << "\n";
         }
     } catch (const std::exception& ex) {
@@ -61,6 +84,21 @@ int main() {
     } else {
         std::cout << "No syntax errors found.\n";
     }
+
+
+    std::cout << "\n\n\n\n\n\n";
+
+    unsigned int idx = 0;
+    nlohmann::json ast = parse_function(tokens, idx);
+
+
+
+    std::string json_res = ast.dump();
+    std::cout << json_res << "\n\n";
+
+    write_to_file("ast.json", json_res);
+
+
 
     return 0;
 }

@@ -1,7 +1,4 @@
 fn main() {
     int x = 0
-
-    for i in 0..10 {
-        x = x + i
-    }
+    x = x + 19
 }
