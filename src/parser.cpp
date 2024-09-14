@@ -32,6 +32,12 @@ AstNode parse_code_block(std::vector<Token> tokens, unsigned int idx) {
         throw std::runtime_error("[fn parse_code_block] called while tokens doesn't start with a curly brace.");
     }
 
+    nlohmann::json code_block;
+    AstNode node {
+        .type = AstNodeType::CodeBlock,
+    };
+
+    
 
 }
 
