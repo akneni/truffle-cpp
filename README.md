@@ -1,5 +1,6 @@
-# Truffle
+![Banner](./branding/truffle-banner.png)
 
+# Truffle
 **Compile-time memory management without caveats**
 
 Truffle is compiler engine that provides an easy way to manage memory at compile time without burdening the user with the unsaftey manual memory management or the complexity of an ownership model. Truffle is also a programming language; this language acts as a front end to the truffle compiler engine meant to showcase it's abilities. 
