@@ -1,44 +1,10 @@
 #include "lexer.h"
 #include "parser.h"
 #include "json.hpp"
+#include "scope_tr.h"
+#include "dtype_utils.h"
 
 // Utils
-DataType dtype_from_str(std::string s) {
-    if (s == "byte") return DataType::U8;
-    if (s == "int") return DataType::I64;
-    if (s == "uint") return DataType::U64;
-    if (s == "float") return DataType::F64;
-    if (s == "string") return DataType::String;
-    if (s == "char") return DataType::Char;
-    if (s == "null") return DataType::Null;
-
-    if (s == "U8") return DataType::U8;
-    if (s == "I64") return DataType::I64;
-    if (s == "U64") return DataType::U64;
-    if (s == "F64") return DataType::F64;
-    if (s == "String") return DataType::String;
-    if (s == "Char") return DataType::Char;
-    if (s == "Null") return DataType::Null;
-
-    throw std::runtime_error("Unknown data type [fn dtype_from_str]: " + s);
-}
-
-std::string dtype_to_str(DataType dtype) {
-    if (dtype == DataType::U8) return "U8";
-    if (dtype == DataType::I64) return "I64";
-    if (dtype == DataType::U64) return "U64";
-    if (dtype == DataType::F64) return "F64";
-    if (dtype == DataType::String) return "String";
-    if (dtype == DataType::Char) return "Char";
-    if (dtype == DataType::Null) return "Null";
-
-    throw std::runtime_error("Unknown data type [fn dtype_to_str]: " + dtype);
-}
-
-bool dtypes_check_valid(DataType actual, DataType inferenced) {
-    return true;
-}
-
 OperationType get_op(std::string op) {
     if (op == "+") return OperationType::Add;
     if (op == "-") return OperationType::Subtract;
@@ -90,6 +56,12 @@ unsigned int get_op_priority(OperationType op) {
 
     throw std::runtime_error("Unknown operation [fn get_op_priority]: " + op);
 }
+
+void consume_whitespace(std::vector<Token> tokens, unsigned int &idx) {
+    while (tokens[idx].token_type == TokenType::NewLine) {
+        idx++;
+    }
+}
 // -------------------
 
 
@@ -101,7 +73,15 @@ unsigned int get_op_priority(OperationType op) {
 ///     "statements": [] // These can be any node specified below
 /// }
 /// ```
-nlohmann::json parse_code_block(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_code_block(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst* var_lst,
+    FuncLst* fn_list
+) {
+    var_lst->push_stack();
+    fn_list->push_stack();
+
     if (tokens[idx].token_type != TokenType::OpenCurlyBrace) {
         throw std::runtime_error("[fn parse_code_block] called while tokens doesn't start with a curly brace.\n" + tokens[idx].to_string());
     }
@@ -124,12 +104,44 @@ nlohmann::json parse_code_block(std::vector<Token> tokens, unsigned int &idx) {
 
         if (tokens[idx].token_type == TokenType::Keyword) {
             if (tokens[idx].value == "fn") {
-                nlohmann::json if_block = parse_if_block(tokens, idx);
+                fn_list->push_back(FunctionTr {
+                    .name = tokens[idx+1].value,
+                    .param_type = {},
+                    .ret_type = BeDataType::Null,
+                });
+
+                nlohmann::json fn_block = parse_function(tokens, idx, var_lst, fn_list);
+                code_block.push_back(fn_block);
+            }
+            else if (tokens[idx].value == "if")  {
+                nlohmann::json if_block = parse_if_block(tokens, idx, var_lst, fn_list);
                 code_block.push_back(if_block);
+            }
+            else if (tokens[idx].value == "while")  {
+                nlohmann::json loop_block = parse_loop(tokens, idx, var_lst, fn_list);
+                code_block.push_back(loop_block);
             }
         }
         else if (tokens[idx].token_type == TokenType::DataType) {
-            code_block.push_back(parse_declaration(tokens, idx));
+            if (tokens[idx+1].token_type != TokenType::Object) {
+                throw std::runtime_error("type without variable declaration");
+            }
+            var_lst->push_back(VariableTr{
+                .name = tokens[idx+1].value,
+                .dtype = dtype_from_str(tokens[idx].value)
+            });
+            code_block.push_back(parse_declaration(tokens, idx, var_lst, fn_list));
+        }
+        else if (tokens[idx].token_type == TokenType::Object) {
+            if (fn_list->contains(tokens[idx].value)) {
+                code_block.push_back(parse_function_call(tokens, idx, var_lst, fn_list));
+            }
+            else if (var_lst->contains(tokens[idx].value)) {
+                code_block.push_back(parse_assignment(tokens, idx, var_lst, fn_list));
+            }
+            else {
+                throw std::runtime_error("Object `" + tokens[idx].value + "` is undefined");
+            }
         }
 
         std::cout << idx << "\n";
@@ -137,6 +149,9 @@ nlohmann::json parse_code_block(std::vector<Token> tokens, unsigned int &idx) {
     }
 
     node["statements"] = code_block;
+
+    var_lst->pop_stack();
+    fn_list->pop_stack();
     return node;
 }
 
@@ -149,7 +164,15 @@ nlohmann::json parse_code_block(std::vector<Token> tokens, unsigned int &idx) {
 ///     "code-block": {"type": "CodeBlock", ...}
 /// }
 /// ```
-nlohmann::json parse_function(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_function(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst* var_lst,
+    FuncLst* fn_list
+) {
+    var_lst->push_stack();
+    fn_list->push_stack();
+
     // Check for 'fn' keyword
     if (tokens[idx].token_type != TokenType::Keyword || tokens[idx].value != "fn") {
         throw std::runtime_error("[fn parse_function] Expected 'fn' keyword at the beginning of function definition.");
@@ -188,7 +211,7 @@ nlohmann::json parse_function(std::vector<Token> tokens, unsigned int &idx) {
             throw std::runtime_error("[fn parse_function] Expected data type in parameter list.");
         }
         std::string param_dtype_str = tokens[idx].value;
-        DataType param_dtype = dtype_from_str(param_dtype_str);
+        BeDataType param_dtype = dtype_from_str(param_dtype_str);
         std::string param_dtype_json = dtype_to_str(param_dtype);
         idx++;  // Move to parameter name
 
@@ -217,7 +240,7 @@ nlohmann::json parse_function(std::vector<Token> tokens, unsigned int &idx) {
     // Check for return type
     if (tokens[idx].token_type == TokenType::DataType) {
         std::string ret_type_str = tokens[idx].value;
-        DataType ret_type = dtype_from_str(ret_type_str);
+        BeDataType ret_type = dtype_from_str(ret_type_str);
         func["ret-type"] = dtype_to_str(ret_type);
         idx++;  // Move to '{'
     } else {
@@ -226,9 +249,11 @@ nlohmann::json parse_function(std::vector<Token> tokens, unsigned int &idx) {
     }
 
     // Parse the function body using parse_code_block
-    nlohmann::json code_block = parse_code_block(tokens, idx);
+    nlohmann::json code_block = parse_code_block(tokens, idx, var_lst, fn_list);
     func["code-block"] = code_block;
 
+    var_lst->pop_stack();
+    fn_list->pop_stack();
     return func;
 }
 
@@ -246,8 +271,55 @@ nlohmann::json parse_function(std::vector<Token> tokens, unsigned int &idx) {
 ///     "default": {"type": "CodeBlock", ...} 
 /// }
 /// ```
-nlohmann::json parse_if_block(std::vector<Token> tokens, unsigned int &idx) {
-    return nlohmann::json();
+nlohmann::json parse_if_block(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst* var_lst,
+    FuncLst* fn_list
+) {
+    var_lst->push_stack();
+    fn_list->push_stack();
+
+    nlohmann::json if_block;
+    if_block["type"] = "IfBlock";
+
+    std::vector<nlohmann::json> statements = {};
+
+    while (true) {
+        if (
+            tokens[idx].token_type != TokenType::Keyword ||
+            tokens[idx].value != "if"
+        ) {
+            if (tokens[idx].value == "else") {
+                break;
+            }
+            throw std::runtime_error("[fn parse_if_block] invalid start token: " + tokens[idx].value);
+        }
+        idx++;
+
+        nlohmann::json statement;
+        statement["condition"] = parse_expression(tokens, idx, var_lst, fn_list);
+
+        if (tokens[idx].token_type != TokenType::OpenCurlyBrace) {
+            throw std::runtime_error("[fn parse_if_block] invalid token after conditional expression: " + tokens[idx].value);
+        }
+
+        statement["code-block"] = parse_code_block(tokens, idx, var_lst, fn_list);
+
+        statements.push_back(statement);
+    }
+
+    if_block["statements"] = statements;
+
+    consume_whitespace(tokens, idx);
+    if (tokens[idx].token_type == TokenType::Keyword && tokens[idx].value == "else") {
+        idx++;
+        if_block["default"] = parse_code_block(tokens, idx, var_lst, fn_list);
+    }
+
+    var_lst->pop_stack();
+    fn_list->pop_stack();
+    return if_block;
 }
 
 /// ## Loop
@@ -258,8 +330,34 @@ nlohmann::json parse_if_block(std::vector<Token> tokens, unsigned int &idx) {
 ///     "code-block": {"type": "CodeBlock", ...} 
 /// }
 /// ```
-nlohmann::json parse_loop(std::vector<Token> tokens, unsigned int &idx) {
-    return nlohmann::json();
+nlohmann::json parse_loop(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst* var_lst,
+    FuncLst* fn_list
+) {
+    var_lst->push_stack();
+    fn_list->push_stack();
+
+    if (tokens[idx].token_type != TokenType::Keyword || tokens[idx].value != "while") {
+        throw std::runtime_error("[fn parse_loop] error parsing, tokens does not start with `while`.");
+    }
+    idx++;
+
+    nlohmann::json loop_block;
+    loop_block["type"] = "Loop";
+    loop_block["condition"] = parse_expression(tokens, idx, var_lst, fn_list);
+
+    if (tokens[idx].token_type != TokenType::OpenCurlyBrace) {
+        throw std::runtime_error("[fn parse_loop] error parsing, conditional expression not followed by `{`");
+    }
+    idx++;
+
+    loop_block["code-block"] = parse_code_block(tokens, idx, var_lst, fn_list);
+
+    var_lst->pop_stack();
+    fn_list->pop_stack();
+    return loop_block;
 }
 
 /// ## FunctionCall
@@ -271,7 +369,12 @@ nlohmann::json parse_loop(std::vector<Token> tokens, unsigned int &idx) {
 ///     "dtype": "DataType"
 /// }
 /// ```
-nlohmann::json parse_function_call(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_function_call(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     if (tokens[idx].token_type != TokenType::Object) {
         throw std::runtime_error("[fn parse_function_call] error parsing, tokens do not start TokenType::Object");
     }
@@ -293,7 +396,7 @@ nlohmann::json parse_function_call(std::vector<Token> tokens, unsigned int &idx)
             continue;
         }
 
-        arguments.push_back(parse_expression(tokens, idx));
+        arguments.push_back(parse_expression(tokens, idx, var_lst, fn_list));
     }
 
     idx++;
@@ -314,7 +417,12 @@ nlohmann::json parse_function_call(std::vector<Token> tokens, unsigned int &idx)
 ///     "dtype": "DataType"
 /// }
 /// ```
-nlohmann::json parse_expression(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_expression(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     unsigned int num_paren = 0;
     bool num_paren_on = false;
 
@@ -357,7 +465,7 @@ nlohmann::json parse_expression(std::vector<Token> tokens, unsigned int &idx) {
     }
     else if (idx == expr_end_idx + 1) {
         if (tokens[idx].token_type == TokenType::Object) {
-            return parse_variable(tokens, idx);
+            return parse_variable(tokens, idx, var_lst, fn_list);
         }
         else if (is_literal(tokens[idx].token_type)) {
             return parse_literal(tokens, idx);
@@ -391,7 +499,7 @@ nlohmann::json parse_expression(std::vector<Token> tokens, unsigned int &idx) {
         // Check if the expression is just a literal or variable
         if (expr_end_idx - idx == 1) {
             if (tokens[idx].token_type == TokenType::Object) {
-                return parse_variable(tokens, idx);
+                return parse_variable(tokens, idx, var_lst, fn_list);
             }
             else if (is_literal(tokens[idx].token_type)) {
                 return parse_literal(tokens, idx);
@@ -403,25 +511,31 @@ nlohmann::json parse_expression(std::vector<Token> tokens, unsigned int &idx) {
 
     op["operator"] = tokens[op_idx].value;
 
-    op["left-operand"] = parse_expression_h(tokens, idx, op_idx-1);
-    op["right-operand"] = parse_expression_h(tokens, op_idx+1, expr_end_idx-1);
+    op["left-operand"] = parse_expression_h(tokens, idx, op_idx-1, var_lst, fn_list);
+    op["right-operand"] = parse_expression_h(tokens, op_idx+1, expr_end_idx-1, var_lst, fn_list);
     op["dtype"] = "Null (TODO)";
 
     idx = expr_end_idx;
     return op;
 }
 
-nlohmann::json parse_expression_h(std::vector<Token> tokens, unsigned int start, unsigned int end) {
+nlohmann::json parse_expression_h(
+    std::vector<Token> tokens, 
+    unsigned int start, 
+    unsigned int end,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     if (end == start) {
         if (is_literal(tokens[start].token_type)) {
             return parse_literal(tokens, start);
         }
         else if (tokens[start].token_type == TokenType::Object) {
-            return parse_variable(tokens, start);
+            return parse_variable(tokens, start, var_lst, fn_list);
         }
         else if (tokens[start].token_type == TokenType::Object) {
             // Parse expression needs to be fixed
-            return parse_function_call(tokens, start);
+            return parse_function_call(tokens, start, var_lst, fn_list);
         }
     }
     else if (end < start) {
@@ -455,8 +569,8 @@ nlohmann::json parse_expression_h(std::vector<Token> tokens, unsigned int start,
 
     op["operator"] = tokens[op_idx].value;
 
-    op["left-operand"] = parse_expression_h(tokens, start, op_idx-1);
-    op["right-operand"] = parse_expression_h(tokens, op_idx+1, end);
+    op["left-operand"] = parse_expression_h(tokens, start, op_idx-1, var_lst, fn_list);
+    op["right-operand"] = parse_expression_h(tokens, op_idx+1, end, var_lst, fn_list);
     op["dtype"] = "Null (TODO)";
 
     return op;
@@ -470,7 +584,12 @@ nlohmann::json parse_expression_h(std::vector<Token> tokens, unsigned int start,
 ///     "src": "..."
 /// }
 /// ```
-nlohmann::json parse_declaration(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_declaration(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     bool auto_dtype = false;
 
     if (tokens[idx].token_type == TokenType::DataType) {
@@ -487,7 +606,7 @@ nlohmann::json parse_declaration(std::vector<Token> tokens, unsigned int &idx) {
         throw std::runtime_error("[fn parse_declaration] called at invalid start");
     }
 
-    DataType dtype = DataType::Null;
+    BeDataType dtype = BeDataType::Null;
     if (!auto_dtype) {
         dtype = dtype_from_str(tokens[idx].value);
     }
@@ -502,9 +621,9 @@ nlohmann::json parse_declaration(std::vector<Token> tokens, unsigned int &idx) {
         idx += 3;
     }
 
-    nlohmann::json expr = parse_expression(tokens, idx);
+    nlohmann::json expr = parse_expression(tokens, idx, var_lst, fn_list);
 
-    DataType expr_dtype = dtype_from_str(expr["dtype"]);
+    BeDataType expr_dtype = dtype_from_str(expr["dtype"]);
     if (auto_dtype) {
         dtype = expr_dtype;
     }
@@ -531,7 +650,12 @@ nlohmann::json parse_declaration(std::vector<Token> tokens, unsigned int &idx) {
 ///     "src": "..."
 /// }
 /// ```
-nlohmann::json parse_assignment(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_assignment(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     if (tokens[idx].token_type != TokenType::Object) {
         throw std::runtime_error("[fn parse_assignment] tokens does not start with object");
     }
@@ -543,7 +667,7 @@ nlohmann::json parse_assignment(std::vector<Token> tokens, unsigned int &idx) {
         throw std::runtime_error("[fn parse_assignment] no assignment operator after variable");
     }
     idx += 2;
-    assignment_s["src"] = parse_expression(tokens, idx);
+    assignment_s["src"] = parse_expression(tokens, idx, var_lst, fn_list);
 
     return assignment_s;
 }
@@ -557,18 +681,18 @@ nlohmann::json parse_assignment(std::vector<Token> tokens, unsigned int &idx) {
 /// }
 /// ```
 nlohmann::json parse_literal(std::vector<Token> tokens, unsigned int &idx) {
-    DataType dtype = DataType::Null;
+    BeDataType dtype = BeDataType::Null;
     if (tokens[idx].token_type == TokenType::IntegerLiteral) {
-        dtype = DataType::I64;
+        dtype = BeDataType::I64;
     }
     else if (tokens[idx].token_type == TokenType::FloatLiteral) {
-        dtype = DataType::F64;
+        dtype = BeDataType::F64;
     }
     else if (tokens[idx].token_type == TokenType::StringLiteral) {
-        dtype = DataType::String;
+        dtype = BeDataType::String;
     }
     else if (tokens[idx].token_type == TokenType::BooleanLiteral) {
-    dtype = DataType::Bool;
+    dtype = BeDataType::Bool;
     }
     else {
         throw std::runtime_error("error parsing literal: token not a literal.");
@@ -590,14 +714,25 @@ nlohmann::json parse_literal(std::vector<Token> tokens, unsigned int &idx) {
 ///     "dtype": "DataType"
 /// }
 /// ```
-nlohmann::json parse_variable(std::vector<Token> tokens, unsigned int &idx) {
+nlohmann::json parse_variable(
+    std::vector<Token> tokens, 
+    unsigned int &idx,
+    VarLst const* var_lst,
+    FuncLst const* fn_list
+) {
     if (tokens[idx].token_type != TokenType::Object) {
         throw std::runtime_error("error parsing variable: token is not an object.");
     }
 
+    std::optional<VariableTr> v = var_lst->get(tokens[idx].value);
+
+    if (!v.has_value()) {
+        throw std::runtime_error("[fn parse_variable] variable DNE");
+    }
+
     nlohmann::json var;
     var["type"] = "Variable";
-    var["dtype"] = "Null (TODO)";
+    var["dtype"] = dtype_to_str(v.value().dtype);
     var["name"] = tokens[idx].value;
     idx++;
     return var;

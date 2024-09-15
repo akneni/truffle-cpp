@@ -1,6 +1,7 @@
 #include "json.hpp"
 #include "lexer.h"
 #include "parser.h"
+#include "scope_tr.h"
 
 #include <iostream>
 #include <string>
@@ -88,8 +89,11 @@ int main() {
 
     std::cout << "\n\n\n\n\n\n";
 
+    VarLst var_lst = VarLst();
+    FuncLst fn_lst = FuncLst();
+    
     unsigned int idx = 0;
-    nlohmann::json ast = parse_function(tokens, idx);
+    nlohmann::json ast = parse_function(tokens, idx, &var_lst, &fn_lst);
 
 
 
