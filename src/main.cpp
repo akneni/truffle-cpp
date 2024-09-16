@@ -2,6 +2,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "scope_tr.h"
+#include "code_gen.h"
 
 #include <iostream>
 #include <string>
@@ -95,14 +96,12 @@ int main() {
     unsigned int idx = 0;
     nlohmann::json ast = parse_function(tokens, idx, &var_lst, &fn_lst);
 
-
-
     std::string json_res = ast.dump();
     std::cout << json_res << "\n\n";
 
     write_to_file("ast.json", json_res);
 
-
+    gen_llvm_ir("truffle-main.ll", ast);
 
     return 0;
 }

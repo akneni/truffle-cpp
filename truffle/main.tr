@@ -1,4 +1,4 @@
-fn main() {
+fn main() string {
     int x = 0
     x = x + 19
 }
