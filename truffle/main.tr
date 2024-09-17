@@ -1,4 +1,13 @@
-fn main() string {
+fn printBool() {
+    print(false)
+}
+
+fn main() int {
     int x = 0
     x = x + 19
+
+    print(true)
+    print(42 - 129)
+
+    printBool()
 }

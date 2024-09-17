@@ -1,3 +1,12 @@
+## Module
+```json
+{
+    "type": "Module",
+    "statements": [] // These can be any node specified below
+}
+```
+
+
 ## CodeBlock
 ```json
 {
@@ -56,6 +65,15 @@
     "type": "AssignmentStatement",
     "dst": "some variable",
     "src": "..."
+}
+```
+
+## ReturnStatement
+```json
+{
+    "type": "ReturnStatement",
+    "value": "...",
+    "dtype": "DataType"
 }
 ```
 

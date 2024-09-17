@@ -62,6 +62,17 @@ std::string Token::to_string() const {
     return "Token\t[  " + ss.str() + "  ]";
 }
 
+bool Token::equals(std::string val) const {
+    return val == value;
+}
+
+bool Token::equals(TokenType tok_type) const {
+    return tok_type == token_type;
+}
+bool Token::equals(TokenType tok_type, std::string val) const {
+    return val == value && tok_type == token_type;
+}
+
 const std::vector<std::string> Lexer::DATA_TYPES = {
     "int",
     "float",
@@ -160,7 +171,8 @@ std::optional<Token> Lexer::next() {
                                                     } else if (functions.find(object_name) != functions.end()) {
                                                         token_type = TokenType::Object;
                                                     } else {
-                                                        throw std::runtime_error("Uninitialized object: " + object_name);
+                                                        token_type = TokenType::Object;
+                                                        std::cout << "Warning: Uninitialized object: " << object_name << "\n";
                                                     }
                                                 }
                                             } else if (last_token.token_type == TokenType::DataType) {
@@ -172,11 +184,13 @@ std::optional<Token> Lexer::next() {
                                                 } else if (functions.find(object_name) != functions.end()) {
                                                     token_type = TokenType::Object;
                                                 } else {
-                                                    throw std::runtime_error("Uninitialized object: " + object_name);
+                                                    token_type = TokenType::Object;
+                                                    std::cout << "Warning: Uninitialized object: " << object_name << "\n";
                                                 }
                                             }
                                         } else {
-                                            throw std::runtime_error("Uninitialized object: " + object_name);
+                                            token_type = TokenType::Object;
+                                            std::cout << "Warning: Uninitialized object: " << object_name << "\n";
                                         }
                                         break;
                                     } else if (std::string("[{()}],\n;").find(curr_char) != std::string::npos) {
@@ -277,43 +291,37 @@ std::optional<size_t> Lexer::starts_with_kw(const std::string& s) {
 
 std::optional<std::pair<size_t, TokenType>> Lexer::starts_with_literal(const std::string& s) {
     // Integer literal
-    static const std::regex re_int(R"(^(([0-9]([0-9]|_)*)|(-([0-9]|_)+)))");
+    static const std::regex re_int(R"(^-?[0-9]+)");
 
     std::smatch match_int;
-    if (std::regex_search(s, match_int, re_int)) {
+    if (std::regex_search(s, match_int, re_int) && match_int.position() == 0) {
         size_t l = match_int.str().size();
+        // Ensure that the next character is not a decimal point (to prevent matching floats)
         if (l >= s.size() || s[l] != '.') {
             return std::make_pair(l, TokenType::IntegerLiteral);
         }
     }
 
     // Float literal
-    if (s.substr(0, 2) != "..") {
-        static const std::regex re_fp(R"(^([0-9]|-|\.)(([0-9]|\.|_)*)?)");
+    static const std::regex re_fp(R"(^-?([0-9]+\.[0-9]*|\.[0-9]+))");
 
-        std::smatch match_fp;
-        if (std::regex_search(s, match_fp, re_fp)) {
-            std::string mat_str = match_fp.str();
-            int num_dots = std::count(mat_str.begin(), mat_str.end(), '.');
-            if (num_dots > 1) {
-                std::string num = mat_str.substr(0, mat_str.find('.'));
-                return std::make_pair(num.size(), TokenType::IntegerLiteral);
-            }
-            return std::make_pair(mat_str.size(), TokenType::FloatLiteral);
-        }
+    std::smatch match_fp;
+    if (std::regex_search(s, match_fp, re_fp) && match_fp.position() == 0) {
+        std::string mat_str = match_fp.str();
+        return std::make_pair(mat_str.size(), TokenType::FloatLiteral);
     }
 
     // String literal
-    static std::regex re_str(R"(^"[^\n]*")");
+    static const std::regex re_str(R"(^"[^\n]*")");
     std::smatch match_str;
-    if (std::regex_search(s, match_str, re_str)) {
+    if (std::regex_search(s, match_str, re_str) && match_str.position() == 0) {
         return std::make_pair(match_str.str().size(), TokenType::StringLiteral);
     }
 
     // Boolean literal
-    static std::regex re_bool(R"(^(true|false))");
+    static const std::regex re_bool(R"(^(true|false))");
     std::smatch match_bool;
-    if (std::regex_search(s, match_bool, re_bool)) {
+    if (std::regex_search(s, match_bool, re_bool) && match_bool.position() == 0) {
         return std::make_pair(match_bool.str().size(), TokenType::BooleanLiteral);
     }
 

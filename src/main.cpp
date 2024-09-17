@@ -92,9 +92,15 @@ int main() {
 
     VarLst var_lst = VarLst();
     FuncLst fn_lst = FuncLst();
+
+    fn_lst.push_back(FunctionTr {
+        .name = "print",
+        .param_type = {},
+        .ret_type = BeDataType::Null
+    });
     
     unsigned int idx = 0;
-    nlohmann::json ast = parse_function(tokens, idx, &var_lst, &fn_lst);
+    nlohmann::json ast = parse_module(tokens, idx, &var_lst, &fn_lst);
 
     std::string json_res = ast.dump();
     std::cout << json_res << "\n\n";

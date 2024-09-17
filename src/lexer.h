@@ -49,6 +49,10 @@ struct Token {
 
     // Function to return a string representation of the Token
     std::string to_string() const;
+
+    bool equals(std::string val) const;
+    bool equals(TokenType tok_type) const;
+    bool equals(TokenType tok_type, std::string val) const;
 };
 
 // Lexer class declaration
