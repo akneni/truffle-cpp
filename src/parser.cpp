@@ -41,11 +41,11 @@ TokenType get_op_type(OperationType op) {
 
 /// 1 is the lowest priority and 255 is the highest
 unsigned int get_op_priority(OperationType op) {
-    if (op == OperationType::Add) return 10;
-    if (op == OperationType::Subtract) return 10;
     if (op == OperationType::Mult) return 11;
     if (op == OperationType::Div) return 11;
     if (op == OperationType::Mod) return 11;
+    if (op == OperationType::Add) return 10;
+    if (op == OperationType::Subtract) return 10;
 
     if (op == OperationType::GreaterThan) return 9;
     if (op == OperationType::LessThan) return 9;
@@ -63,6 +63,11 @@ void consume_whitespace(std::vector<Token> tokens, unsigned int &idx) {
     }
 }
 // -------------------
+
+
+// Forward Declarations
+BeDataType inference_type(BeDataType left, BeDataType right, std::string op);
+// ---------------
 
 
 /// ## Module
@@ -88,8 +93,6 @@ nlohmann::json parse_module(
 
     while (idx < tokens.size()) {
         consume_whitespace(tokens, idx);
-
-        std::cout << tokens[idx].to_string() << "\n";
 
         if (tokens[idx].token_type == TokenType::Keyword) {
             if (tokens[idx].value == "fn") {
@@ -135,7 +138,12 @@ nlohmann::json parse_code_block(
     fn_list->push_stack();
 
     if (tokens[idx].token_type != TokenType::OpenCurlyBrace) {
-        throw std::runtime_error("[fn parse_code_block] called while tokens doesn't start with a curly brace.\n" + tokens[idx].to_string());
+        std::cout << "[fn parse_code_block] called while tokens doesn't start with a curly brace.\nNext Tokens:\n";
+        for (int i = idx; i < (idx + 5) && i < tokens.size(); i++) {
+            std::cout << tokens[i].to_string() << "\n";
+        }
+
+        throw std::runtime_error("--");
     }
     std::vector<nlohmann::json> code_block = {};
 
@@ -144,13 +152,13 @@ nlohmann::json parse_code_block(
 
     idx++;
 
-    // while (true) {
-    for (int i = 0; i < 12; i++) {
+    while (true) {
         if (tokens[idx].token_type == TokenType::NewLine) {
             idx++;
             continue;
         }
         else if (tokens[idx].token_type == TokenType::CloseCurlyBrace) {
+            idx++;
             break;
         }
 
@@ -201,6 +209,9 @@ nlohmann::json parse_code_block(
             else {
                 throw std::runtime_error("Object `" + tokens[idx].value + "` is undefined");
             }
+        }
+        else {
+            throw std::runtime_error("no valid parsing strategy in [fn parse_code_block] for " + tokens[idx].to_string());
         }
     }
 
@@ -260,7 +271,6 @@ nlohmann::json parse_function(
 
     // Parse parameters
     std::vector<nlohmann::json> params = {};
-
     while (tokens[idx].token_type != TokenType::CloseParen) {
         // Skip commas
         if (tokens[idx].token_type == TokenType::Comma) {
@@ -294,7 +304,7 @@ nlohmann::json parse_function(
     func["parameters"] = params;
 
     // Now tokens[idx] should be ')'
-    if (tokens[idx].token_type != TokenType::CloseParen) {
+    if (!tokens[idx].equals(TokenType::CloseParen)) {
         throw std::runtime_error("[fn parse_function] Expected ')' after parameters list.");
     }
     idx++;  // Move past ')'
@@ -413,7 +423,6 @@ nlohmann::json parse_loop(
     if (tokens[idx].token_type != TokenType::OpenCurlyBrace) {
         throw std::runtime_error("[fn parse_loop] error parsing, conditional expression not followed by `{`");
     }
-    idx++;
 
     loop_block["code-block"] = parse_code_block(tokens, idx, var_lst, fn_list);
 
@@ -463,8 +472,16 @@ nlohmann::json parse_function_call(
 
     idx++;
 
+    std::optional<FunctionTr> f = fn_list->get(tokens[idx].value);
+
     func["parameters"] = arguments;
-    func["dtype"] = "Null (TODO)";
+
+    if (f.has_value()) {
+        func["dtype"] = dtype_to_str(f.value().ret_type);
+    }
+    else {
+        func["dtype"] = "Null";
+    }
 
     return func;
 }
@@ -494,6 +511,7 @@ nlohmann::json parse_expression(
         if (
             tokens[i].token_type == TokenType::CloseCurlyBrace ||
             tokens[i].token_type == TokenType::CloseSquareBracket ||
+            tokens[i].token_type == TokenType::OpenCurlyBrace ||
             tokens[i].token_type == TokenType::SemiColon ||
             tokens[i].token_type == TokenType::Comma || 
             tokens[i].token_type == TokenType::NewLine
@@ -567,7 +585,7 @@ nlohmann::json parse_expression(
                 return parse_literal(tokens, idx);
             }
         }
-        throw std::runtime_error("[fn parse_expression] No operation found");
+        throw std::runtime_error("[fn parse_expression] No operation found. Curr token: " + tokens[idx].to_string());
     }
 
 
@@ -575,7 +593,12 @@ nlohmann::json parse_expression(
 
     op["left-operand"] = parse_expression_h(tokens, idx, op_idx-1, var_lst, fn_list);
     op["right-operand"] = parse_expression_h(tokens, op_idx+1, expr_end_idx-1, var_lst, fn_list);
-    op["dtype"] = "Null (TODO)";
+    auto dtype_res = inference_type(
+        dtype_from_str(op["left-operand"]["dtype"]),
+        dtype_from_str(op["right-operand"]["dtype"]),
+        tokens[op_idx].value
+    );
+    op["dtype"] = dtype_to_str(dtype_res);
 
     idx = expr_end_idx;
     return op;
@@ -626,14 +649,20 @@ nlohmann::json parse_expression_h(
     }
 
     if (op_priority == 0) {
-        throw std::runtime_error("[fn parse_expression_h] No operation found");
+        std::cout << "Num Tokens: " << (end-start) << "\n";
+        throw std::runtime_error("[fn parse_expression] No operation found. Curr token: " + tokens[start].to_string());
     }
 
     op["operator"] = tokens[op_idx].value;
 
     op["left-operand"] = parse_expression_h(tokens, start, op_idx-1, var_lst, fn_list);
     op["right-operand"] = parse_expression_h(tokens, op_idx+1, end, var_lst, fn_list);
-    op["dtype"] = "Null (TODO)";
+    auto dtype_res = inference_type(
+        dtype_from_str(op["left-operand"]["dtype"]),
+        dtype_from_str(op["right-operand"]["dtype"]),
+        tokens[op_idx].value
+    );
+    op["dtype"] = dtype_to_str(dtype_res);
 
     return op;
 }
@@ -758,7 +787,7 @@ nlohmann::json parse_return(
     nlohmann::json ret_statement;
     ret_statement["type"] = "ReturnStatement";
     ret_statement["value"] = parse_expression(tokens, idx, var_lst, fn_list);
-    ret_statement["dtype"] = "Null (TODO)";
+    ret_statement["dtype"] = ret_statement["value"]["dtype"];
 
     return ret_statement;
 }
@@ -828,4 +857,108 @@ nlohmann::json parse_variable(
     var["name"] = tokens[idx].value;
     idx++;
     return var;
+}
+
+
+BeDataType inference_type(BeDataType left, BeDataType right, std::string op) {
+    if (op == "+") {
+        if (left == BeDataType::I64 && right == BeDataType::I64) {
+            return BeDataType::I64;
+        }
+        else if (left == BeDataType::I64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::I64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::String && right == BeDataType::String) {
+            return BeDataType::String;
+        }
+        else {
+            throw std::runtime_error("[fn inference_type] invalid operations");
+        }
+    }
+    else if (op == "-") {
+        if (left == BeDataType::I64 && right == BeDataType::I64) {
+            return BeDataType::I64;
+        }
+        else if (left == BeDataType::I64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::I64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else {
+            throw std::runtime_error("[fn inference_type] invalid operations");
+        }
+    }
+    else if (op == "*") {
+        if (left == BeDataType::I64 && right == BeDataType::I64) {
+            return BeDataType::I64;
+        }
+        else if (left == BeDataType::I64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::I64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else {
+            throw std::runtime_error("[fn inference_type] invalid operations");
+        }
+    }
+    else if (op == "/") {
+        if (left == BeDataType::I64 && right == BeDataType::I64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::I64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::I64) {
+            return BeDataType::F64;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::F64) {
+            return BeDataType::F64;
+        }
+        else {
+            throw std::runtime_error("[fn inference_type] invalid operations");
+        }
+    }
+    else if (op == "%") {
+        if (left == BeDataType::I64 && right == BeDataType::I64) {
+            return BeDataType::I64;
+        }
+        else {
+            throw std::runtime_error("[fn inference_type] invalid operations");
+        }
+    }
+    else if (
+        op == ">" ||
+        op == ">=" ||
+        op == "<" ||
+        op == "<=" ||
+        op == "==" ||
+        op == "!=" 
+    ) {
+        if (left == right) {
+            return BeDataType::Bool;
+        }
+        else if (left == BeDataType::I64 && right == BeDataType::F64) {
+            return BeDataType::Bool;
+        }
+        else if (left == BeDataType::F64 && right == BeDataType::I64) {
+            return BeDataType::Bool;
+        }
+        throw std::runtime_error("[fn inference_type] invalid comparison");
+    }
+
+    throw std::runtime_error("[fn inference_type] invalid operations");
 }

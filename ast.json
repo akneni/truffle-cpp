@@ -4,13 +4,13 @@
             "code-block": {
                 "statements": [
                     {
-                        "dtype": "Null (TODO)",
+                        "dtype": "Null",
                         "function-name": "print",
                         "parameters": [
                             {
-                                "dtype": "Bool",
+                                "dtype": "I64",
                                 "type": "Literal",
-                                "value": "false"
+                                "value": "69"
                             }
                         ],
                         "type": "FunctionCall"
@@ -37,63 +37,89 @@
                         "type": "DeclarationStatement"
                     },
                     {
-                        "dst": "x",
-                        "src": {
-                            "dtype": "Null (TODO)",
+                        "code-block": {
+                            "statements": [
+                                {
+                                    "dst": "x",
+                                    "src": {
+                                        "dtype": "I64",
+                                        "left-operand": {
+                                            "dtype": "I64",
+                                            "name": "x",
+                                            "type": "Variable"
+                                        },
+                                        "operator": "+",
+                                        "right-operand": {
+                                            "dtype": "I64",
+                                            "type": "Literal",
+                                            "value": "1"
+                                        },
+                                        "type": "Expression"
+                                    },
+                                    "type": "AssignmentStatement"
+                                },
+                                {
+                                    "dtype": "Null",
+                                    "function-name": "print",
+                                    "parameters": [
+                                        {
+                                            "dtype": "F64",
+                                            "left-operand": {
+                                                "dtype": "I64",
+                                                "type": "Literal",
+                                                "value": "42"
+                                            },
+                                            "operator": "*",
+                                            "right-operand": {
+                                                "dtype": "F64",
+                                                "type": "Literal",
+                                                "value": "23.237248"
+                                            },
+                                            "type": "Expression"
+                                        }
+                                    ],
+                                    "type": "FunctionCall"
+                                }
+                            ],
+                            "type": "CodeBlock"
+                        },
+                        "condition": {
+                            "dtype": "Bool",
                             "left-operand": {
                                 "dtype": "I64",
                                 "name": "x",
                                 "type": "Variable"
                             },
-                            "operator": "+",
+                            "operator": "<",
                             "right-operand": {
                                 "dtype": "I64",
                                 "type": "Literal",
-                                "value": "19"
+                                "value": "10"
                             },
                             "type": "Expression"
                         },
-                        "type": "AssignmentStatement"
+                        "type": "Loop"
                     },
                     {
-                        "dtype": "Null (TODO)",
-                        "function-name": "print",
-                        "parameters": [
-                            {
-                                "dtype": "Bool",
-                                "type": "Literal",
-                                "value": "true"
-                            }
-                        ],
-                        "type": "FunctionCall"
-                    },
-                    {
-                        "dtype": "Null (TODO)",
-                        "function-name": "print",
-                        "parameters": [
-                            {
-                                "dtype": "Null (TODO)",
-                                "left-operand": {
-                                    "dtype": "I64",
-                                    "type": "Literal",
-                                    "value": "42"
-                                },
-                                "operator": "-",
-                                "right-operand": {
-                                    "dtype": "I64",
-                                    "type": "Literal",
-                                    "value": "129"
-                                },
-                                "type": "Expression"
-                            }
-                        ],
-                        "type": "FunctionCall"
-                    },
-                    {
-                        "dtype": "Null (TODO)",
+                        "dtype": "Null",
                         "function-name": "printBool",
                         "parameters": [],
                         "type": "FunctionCall"
+                    },
+                    {
+                        "dtype": "Null",
+                        "function-name": "__some_c_func",
+                        "parameters": [],
+                        "type": "FunctionCall"
+                    },
+                    {
+                        "dtype": "I64",
+                        "type": "ReturnStatement",
+                        "value": {
+                            "dtype": "I64",
+                            "type": "Literal",
+                            "value": "0"
+                        }
                     }
                 ],
                 "type": "CodeBlock"

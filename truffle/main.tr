@@ -1,13 +1,19 @@
 fn printBool() {
-    print(false)
+    print(69)
 }
 
 fn main() int {
     int x = 0
-    x = x + 19
+    
+    while x < 10 {
+        x = x + 1
+        print(42 * 23.237248)
+    }
+    
 
-    print(true)
-    print(42 - 129)
 
     printBool()
+    __some_c_func()
+
+    return 0
 }

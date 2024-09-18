@@ -98,6 +98,13 @@ int main() {
         .param_type = {},
         .ret_type = BeDataType::Null
     });
+
+    fn_lst.push_back(FunctionTr {
+        .name = "__some_c_func",
+        .param_type = {},
+        .ret_type = BeDataType::Null
+    });
+    
     
     unsigned int idx = 0;
     nlohmann::json ast = parse_module(tokens, idx, &var_lst, &fn_lst);

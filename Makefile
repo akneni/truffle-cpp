@@ -21,3 +21,4 @@ clean:
 	rm -f truffle-main
 	rm -f truffle-main.o
 	rm -f truffle-main.ll
+	rm -f truffle-main.bc

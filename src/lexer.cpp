@@ -396,6 +396,11 @@ std::vector<std::string> Lexer::validate_syntax() {
     for (size_t i = 0; i < tokens.size(); ++i) {
         const Token& tok = tokens[i];
         switch (tok.token_type) {
+            case TokenType::Object:
+                if (tok.value.substr(0, 19) == "__compiler_reserved") {
+                    errors.push_back("Objects cannot start with `__compiler_reserved`");
+                }
+                break;
             case TokenType::OpenParen:
                 num_paren += 1;
                 break;
