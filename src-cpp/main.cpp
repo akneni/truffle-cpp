@@ -4,6 +4,7 @@
 #include "scope_tr.h"
 #include "code_gen.h"
 
+#include <time.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -56,39 +57,21 @@ void write_to_file(const std::string& path, const std::string& data) {
 }
 
 
-int main() {
-    std::string source_code = f_read_to_string(std::string("truffle/main.tr"));
-    Lexer lexer(source_code);
+void generate_ast() {
+    time_t start = clock();
+    
+    
+    std::string source = f_read_to_string("truffle/main.tr");
 
-    std::vector<Token> tokens = {};
+    Lexer lexer = Lexer(source);
 
-    try {
-        while (true) {
-            auto token_opt = lexer.next();
-            if (!token_opt.has_value()) {
-                break;
-            }
-            const Token& token = token_opt.value();
-            tokens.push_back(token);
-            std::cout << token.to_string() << "\n";
+    
+    while (true) {
+        auto x = lexer.next();
+        if (!x.has_value()) {
+            break;
         }
-    } catch (const std::exception& ex) {
-        std::cerr << "Lexer error: " << ex.what() << "\n";
-        return 1;
     }
-
-    auto errors = lexer.validate_syntax();
-    if (!errors.empty()) {
-        std::cerr << "Syntax errors found:\n";
-        for (const auto& err : errors) {
-            std::cerr << err << "\n";
-        }
-    } else {
-        std::cout << "No syntax errors found.\n";
-    }
-
-
-    std::cout << "\n\n\n\n\n\n";
 
     VarLst var_lst = VarLst();
     FuncLst fn_lst = FuncLst();
@@ -96,23 +79,37 @@ int main() {
     fn_lst.push_back(FunctionTr {
         .name = "print",
         .param_type = {},
-        .ret_type = BeDataType::Null
+        .ret_type = BeDataType::Null,
     });
 
     fn_lst.push_back(FunctionTr {
         .name = "__some_c_func",
         .param_type = {},
-        .ret_type = BeDataType::Null
+        .ret_type = BeDataType::Null,
     });
-    
-    
+
     unsigned int idx = 0;
-    nlohmann::json ast = parse_module(tokens, idx, &var_lst, &fn_lst);
+    nlohmann::json ast = parse_module(lexer.tokens, idx, &var_lst, &fn_lst);
 
-    std::string json_res = ast.dump();
-    std::cout << json_res << "\n\n";
+    std::string ast_str = ast.dump();
+    write_to_file("ast.json", ast_str);
 
-    write_to_file("ast.json", json_res);
+    time_t end = clock();
+    printf("Time Elapsed: %f", ((double) end - (double) start) / (double) CLOCKS_PER_SEC);
+}
+
+
+
+int main() {
+    std::cout << "Starting LLVM code gen...\n";
+
+    // TEMP
+    generate_ast();
+    return 0;
+
+    std::string ast_str = f_read_to_string("ast.json");
+    
+    nlohmann::json ast = nlohmann::json::parse(ast_str);
 
     gen_llvm_ir("truffle-main.ll", ast);
 

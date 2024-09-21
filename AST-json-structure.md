@@ -2,7 +2,7 @@
 ```json
 {
     "type": "Module",
-    "statements": [] // These can be any node specified below
+    "statements": [] // These need to be functions or declaration statements (for globals)
 }
 ```
 

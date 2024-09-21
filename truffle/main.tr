@@ -6,6 +6,75 @@ fn main() int {
     int x = 0
     
     while x < 10 {
+
+        x = x + 1
+        print(42 * 23.237248)
+    }
+    
+
+
+    printBool()
+    __some_c_func()
+
+    return 0
+}
+
+fn main() int {
+    int x = 0
+    
+    while x < 10 {
+
+        x = x + 1
+        print(42 * 23.237248)
+    }
+    
+
+
+    printBool()
+    __some_c_func()
+
+    return 0
+}
+
+fn main() int {
+    int x = 0
+    
+    while x < 10 {
+
+        x = x + 1
+        print(42 * 23.237248)
+    }
+    
+
+
+    printBool()
+    __some_c_func()
+
+    return 0
+}
+
+fn main() int {
+    int x = 0
+    
+    while x < 10 {
+
+        x = x + 1
+        print(42 * 23.237248)
+    }
+    
+
+
+    printBool()
+    __some_c_func()
+
+    return 0
+}
+
+fn main() int {
+    int x = 0
+    
+    while x < 10 {
+
         x = x + 1
         print(42 * 23.237248)
     }

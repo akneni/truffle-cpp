@@ -1,1 +1,5 @@
 .VSCodeCounter
+
+# Added by cargo
+
+/target
