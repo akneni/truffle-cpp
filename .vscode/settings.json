@@ -80,5 +80,8 @@
         "__node_handle": "cpp",
         "__memory": "cpp",
         "filesystem": "cpp"
-    }
+    },
+    "cSpell.words": [
+        "ifblock"
+    ]
 }

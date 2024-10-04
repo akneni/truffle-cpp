@@ -2,6 +2,7 @@
 mod lexer;
 mod parser;
 mod utils;
+mod c_gen;
 
 use std::{collections::HashSet, default, fs, io::Stdout, process, time::Instant};
 use std::sync::OnceLock;
