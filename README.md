@@ -1,16 +1,16 @@
 ![Banner](./branding/truffle-banner.png)
 
 # Truffle
-**Compile-time memory management without caveats**
-
-Truffle is compiler engine that provides an easy way to manage memory at compile time without burdening the user with the unsaftey manual memory management or the complexity of an ownership model. Truffle is also a programming language; this language acts as a front end to the truffle compiler engine meant to showcase it's abilities. 
+**PGO Without the Hassle**
+Profile Guided Optimization (PGO) is a technique that uses a program's runtime data (or "runtime profile") to make more informed decisions in the compilation process, leading to faster code and smaller binaries. The problem with PGO is that high quality runtime data can be time consuming and tedious to acquire, especially in a fast-paced production setting. Truffle aims to use AI to automatically generate synthetic runtime data based on a program's source code. This one additional step in the compilation process can improve runtime performance of many programs anywhere from 0-15%. 
 
 ---
 
-## 🚧 Work In Progress
+## 🔭 Scope
+Currently, Truffle only aims to support C/C++. Support for other systems level languages may come in the far future. 
 
+## 🚧 Work In Progress
 **Note:** Truffle is in a very early state and nearly everything is currently under active development.
 Key areas currently being worked on:
-- **LLVM Integration**: Leveraging LLVM's backend for highly efficient code generation.
-- **AutoFree Functionality**: Implementing an automatic memory cleanup feature where the compiler determines when objects are no longer in use and frees memory without developer intervention. This feature aims to eliminate the need for manual deallocation while ensuring efficient memory use, offering the best of both worlds—high performance without the risk of memory leaks.
-- **LLM Enabled Optimization**: This is a highly experimental feature. While LLVM optimizes LLVM IR, it does not focus extensively on optimizing the final machine code for specific target architectures. We are experimenting with using a Large Language Model (LLM) to optimize sections of the final machine code. This feature is inspired by a [research paper published by Meta](https://ai.meta.com/research/publications/meta-large-language-model-compiler-foundation-models-of-compiler-optimization/). 
+- **TrufC**: TrufC is the CLI tool that users will interact with when using Truffle to optimize their code. 
+- **TPGO 1 25M && TPGO 1 200M**: Truffle PGO (TPGO) are the models that will produce synthetic runtime data.

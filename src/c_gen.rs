@@ -192,21 +192,3 @@ fn gen_c_loop(ast_node: &Value) -> String {
     code.push_str("    }\n");
     code
 }
-
-
-fn gen_c_ifblock(ast_node: &Value) -> String {
-
-}
-
-fn gen_c_loop(ast_node: &Value) -> String {
-
-}
-
-fn gen_c_assignment(ast_node: &Value) -> String {
-
-}
-
-fn gen_c_declaration(ast_node: &Value) -> String {
-
-}
-
