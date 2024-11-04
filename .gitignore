@@ -1,5 +1,3 @@
-.VSCodeCounter
-
-# Added by cargo
-
-/target
+truf-lang/target
+trufc/target
+trif-gpo/docker-volume

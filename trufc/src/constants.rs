@@ -1,0 +1,1 @@
+pub const TMP_DIR: &str = ".tmp";

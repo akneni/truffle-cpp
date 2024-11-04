@@ -1,0 +1,27 @@
+{
+    "files.associations": {
+        "cstdlib": "cpp",
+        "memory": "cpp",
+        "vector": "cpp"
+    },
+    "cSpell.words": [
+        "dyno",
+        "errno",
+        "fdata",
+        "ffast",
+        "flto",
+        "fomit",
+        "fprefetch",
+        "fprofile",
+        "funroll",
+        "funsafe",
+        "fwhole",
+        "hfsort",
+        "lpgo",
+        "mtune",
+        "profdata",
+        "profraw",
+        "Truf",
+        "trufc"
+    ]
+}
