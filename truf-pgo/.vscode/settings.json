@@ -7,21 +7,31 @@
     "cSpell.words": [
         "dyno",
         "errno",
+        "falign",
         "fdata",
+        "fdevirtualize",
         "ffast",
+        "fgcse",
+        "fgraphite",
+        "floop",
         "flto",
+        "fmerge",
         "fomit",
+        "fopt",
         "fprefetch",
         "fprofile",
+        "ftree",
         "funroll",
         "funsafe",
         "fwhole",
         "hfsort",
         "lpgo",
         "mtune",
+        "mystdout",
         "profdata",
         "profraw",
         "Truf",
-        "trufc"
+        "trufc",
+        "vectorize"
     ]
 }

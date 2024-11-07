@@ -34,8 +34,8 @@ def exec_code(item: Code):
 
 def compile_and_benchmark():
     try:
-        for c_file in os.listdir('./C-DATASET'):
-            c_filepath = os.path.join('C-DATASET', c_file)
+        for c_file in os.listdir('./C-dataset'):
+            c_filepath = os.path.join('C-dataset', c_file)
             tools = [
                 'gcc', 
                 # 'bolt', 

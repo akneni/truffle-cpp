@@ -1,3 +1,7 @@
-truf-lang/target
-trufc/target
-trif-gpo/docker-volume
+truf-lang/target/
+trufc/target/
+truf-pgo/C-dataset/
+truf-pgo/benchmarking-dataset/
+**/.venv/
+**/__pycache__/
+**/*.ipynb

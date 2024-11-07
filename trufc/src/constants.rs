@@ -1,1 +1,2 @@
-pub const TMP_DIR: &str = ".tmp";
+pub const CONFIG_FILE: &str = "TrufC.toml";
+pub const INSTALL_DIR: &str = "/";

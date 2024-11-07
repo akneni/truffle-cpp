@@ -1,0 +1,13 @@
+[project]
+name = "trufc"
+version = "0.0.1"
+
+[compiler]
+c = {name = "gcc", version = "11.4.0", standard = "c99"}
+cpp = {name = "g++", version = "11.4.0", standard = "c++17"}
+
+[profile.release]
+flags = ["-O3", "-ffast-math"]
+
+[profile.dev]
+flags = ["-O2"]

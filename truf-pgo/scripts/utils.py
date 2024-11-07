@@ -1,22 +1,15 @@
 import hashlib
-import os
 import subprocess
-import dataclasses
 from dataclasses import dataclass
-import shelve
 import platform
 from datetime import datetime
 import random
-import sys
-import pymongo
-
-SHELVE_PATH: str = "/docker-volume/benchmark.shelve"
-MONGO_KEY: str = os.environ['MONGO_KEY']
 
 @dataclass
 class SystemSpec:
     os: str
     cpu: str
+    compiler: str
     os_version: str = None
     cpu_arch: str = None
     cpu_physical_cores: int = None
@@ -34,10 +27,26 @@ class SystemSpec:
             os=platform.system(),
             os_version=platform.platform(),
             cpu_arch=platform.machine(),
+            **SystemSpec.compiler_specs(),
             **SystemSpec.cpu_specs(),
             **SystemSpec.mem_specs(),
         )
         return spec
+
+    @staticmethod
+    def compiler_specs() -> dict:
+        specs = {'compiler': 'gcc (unknown version)'}
+        try:
+            result = subprocess.run(["gcc", "--version"], stdout=subprocess.PIPE)
+            try:
+                line = result.stdout.decode('utf-8').strip().split('\n')[0].strip()
+                specs['compiler'] = line
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+        return specs
 
     @staticmethod
     def cpu_specs():
@@ -117,88 +126,3 @@ class ExecutionTrial:
         output = self.output.strip()
         time_elapsed = output.split('\n')[-1]
         return float(time_elapsed.partition(':')[2].strip())
-
-
-def benchmark_gcc_flags():
-    flags = [
-        "-O3",
-        "-O3 -funroll-loops",
-        "-O3 -fprefetch-loop-arrays",
-        "-O3 -flto",
-        "-O3 -ffast-math",
-        "-O3 -fno-math-errno",
-        "-O3 -funsafe-math-optimizations",
-        "-O3 -march=native",
-        "-O3 -mtune=native",
-        "-O3 -fomit-frame-pointer",
-        "-O3 -fwhole-program",        
-    ]
-    flags = [
-        [f, hashlib.sha256(f.encode('ascii')).hexdigest()[:8]]
-        for f in flags
-    ]
-
-    # client = pymongo.MongoClient(MONGO_KEY)
-    # collection = client.get_database('truffle').get_collection('truffle-pgo-benchmarking')
-
-    for c_file in os.listdir("C-DATASET"):
-        c_filepath = os.path.join("C-DATASET", c_file)
-        
-        links = ""
-        with open(c_filepath, 'r') as f:
-            line = f.readline()
-            if line.startswith("// LINK:") or line.startswith("//LINK:"):
-                dynamic_links = line.partition(':')[2].strip()
-                links = f" {dynamic_links}"
-        
-        child_p = []
-        for (flag, hash) in flags:
-            output_filename = f"c-benchmark-tester-{c_file}-{hash}.exe"
-            cmd = f"gcc {flag} -o {output_filename} {c_filepath}{links}"
-            child = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL)
-            child_p.append(child)
-        
-        system_specs = SystemSpec.generate()
-
-        for child in child_p:
-            child.wait()
-        print(f"Finished compiling {c_file}")
-        print('_'*40)
-
-        num_trials = 1
-        argv = [i for i in sys.argv if i.startswith('--trials')]
-        if len(argv) > 0:
-            num_trials = int(argv[0].partition('=')[2])
-
-        for _ in range(num_trials):
-            for (flag, hash) in flags:
-                try:
-                    output_filename = f"c-benchmark-tester-{c_file}-{hash}.exe"
-                    stdout = subprocess.run(f"./{output_filename}", stdout=subprocess.PIPE)
-
-                    with open(c_filepath, 'r') as f:
-                        c_source = f.read()
-
-                    record = ExecutionTrial(
-                        c_filename=c_file,
-                        c_source=c_source,
-                        flags=flag.strip().split(),
-                        output=stdout.stdout.decode("utf-8"),
-                        system_specs=system_specs,
-                        created_at=datetime.now()
-                    )
-
-                    record = dataclasses.asdict(record)
-
-                    with shelve.open(SHELVE_PATH) as db:
-                        db[record.gen_uid()] = record
-
-                    # collection.insert_one(record)
-                    
-                    print(f"Completed benchmarking [{c_file:<15}] ( {flag:<30} )")
-                except Exception as err:
-                    print(f"Error running running exe: {err}")
-        print('\n'*3)
-
-if __name__ == '__main__':
-    benchmark_gcc_flags()

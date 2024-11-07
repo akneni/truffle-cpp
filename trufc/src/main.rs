@@ -1,78 +1,130 @@
-mod bolt;
-mod gcc;
-mod llvm_pgo;
 mod constants;
+mod utils;
+mod config;
+mod build_sys;
 
-use std::{env, process};
 
-fn parse_target(cli: &[String]) -> String {
-    let target = cli.last().unwrap();
-    assert!(target.ends_with(".c"));
-    target.clone()
+use std::{env, fs, process};
+
+use clap::{Parser, Subcommand};
+use config::Config;
+use constants::CONFIG_FILE;
+
+#[derive(Parser, Debug)]
+#[command(name = "TrufC")]
+#[command(version = "1.0")]
+#[command(about = "A build system that integrates with truffle optimizations.", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
 }
 
-/// Returns the value of a flag.
-/// Ex) calling `parse_flag_kv("gcc -O3 -o main main.c", "-o")` will return `"main"`
-fn parse_flag_kv(cli: &[String], flag: &str) -> Option<String> {
-    let cmp_target = format!("{}=", flag);
-    for (i, arg) in cli.iter().enumerate() {
-        if arg == flag {
-            return Some(cli[i+1].clone());
-        }
-        else if arg.starts_with(&cmp_target) {
-            return Some(arg.split_once("=").unwrap().1.to_string());
-        }
-    }
-    None
-}
-
-/// Returns a bool based on the existence of a flag.
-/// Ex) calling `parse_flag_kv("gcc -O3 -o main main.c", "-O3")` will return `true`
-fn parse_flag_k(cli: &[String], flag: &str) -> bool {
-    let idx = cli.iter().position(|s| s == flag);
-    idx.is_some()
-}
-
-/// Accepts multiple possible flags to search for, and returns one if it exists.
-/// Ex) calling `parse_flags_kv("gcc -O3 -o main main.c", ["-O3", "-02"])` will return `"-O3"`
-fn parse_flags_k(cli: &[String], flag: &[&str]) -> Option<String> {
-    let idx = cli.iter().position(|s| flag.contains(&s.as_str()));
-    if let Some(idx) = idx {
-        return Some(cli[idx].to_string());
-    }
-    None
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Init,
+    New {proj_name: String},
+    Build {
+        profile: Option<String>
+    },
+    Run {
+        profile: Option<String>
+    },
 }
 
 fn main() {
-    let cli: Vec<String> = env::args().collect();
-    if cli.len() < 2 {
-        println!("Error, must pass a command");
-        process::exit(0);
+    let cli = Cli::parse();
+
+    match cli.command {
+        Commands::Init => {
+            let cwd = env::current_dir().unwrap();
+            if let Err(e) = build_sys::create_project(&cwd) {
+                println!("An error occurred while creating the project:\n{}", e);
+                process::exit(1);
+            }
+        }
+        Commands::New {proj_name} => {
+            let mut target_dir = env::current_dir().unwrap();
+            target_dir.push(proj_name);
+            if target_dir.exists() {
+                println!("Error: file of directory already exists");
+                process::exit(1);
+            }
+            fs::create_dir(&target_dir).unwrap();
+
+            if let Err(e) = build_sys::create_project(&target_dir) {
+                println!("An error occurred while creating the project:\n{}", e);
+            }
+        }
+        Commands::Build {profile} => {
+            handle_build(profile);
+        }
+        Commands::Run {profile} => {
+            handle_build(profile.clone());
+
+            let profile = profile
+                .unwrap_or("--dev".to_string());
+            if !profile.starts_with("--") {
+                println!("Error: profile must start with `--`");
+                process::exit(1);
+            }
+
+            let mut cwd = env::current_dir().unwrap();
+
+            cwd.push(CONFIG_FILE);
+            let config = Config::from(&cwd).unwrap();
+            cwd.pop();
+
+            cwd.push("build");
+            cwd.push(&profile[2..]);
+            cwd.push(config.project.name);
+
+            let bin = cwd.to_str().unwrap();
+            // println!("bin = {}", bin);
+
+            let mut child = process::Command::new(bin)
+                .spawn()
+                .unwrap();
+
+            child.wait().unwrap();
+        }
+    }
+}
+
+
+fn handle_build(profile: Option<String>) {
+    let profile = profile
+        .unwrap_or("--dev".to_string());
+    if !profile.starts_with("--") {
+        println!("Error: profile must start with `--`");
+        process::exit(1);
     }
 
-    match cli[1].as_str() {
-        "gcc" => {
-            gcc::build_c(&cli[2..]).unwrap();
-        },
-        "gcc-pgo" => {
-
-        },
-        "bolt" => {
-            let target = parse_target(&cli);
-            let output_filepath = parse_flag_kv(&cli, "-o")
-                .unwrap_or(format!("{}.exe", &target[0..(target.len()-2)]));
-
-            let bolt_path = parse_flag_kv(&cli, "--bolt-path");
-
-            bolt::compile_bolt(&target, &output_filepath, bolt_path).unwrap();
-        },
-        "lvm-pgo" => {
-            let target = parse_target(&cli);
-            let output_filepath = parse_flag_kv(&cli, "-o")
-                .unwrap_or(format!("{}.exe", &target[0..(target.len()-2)]));
-
-            llvm_pgo::compile_llvm_pgo(&target, &output_filepath).unwrap();
-        },
-        _ => println!("In valid command: `{}`", cli[1])
+    let mut cwd = env::current_dir().unwrap();
+    cwd.push("build");
+    cwd.push(&profile[2..]);
+    if !cwd.exists() {
+        fs::create_dir_all(&cwd).unwrap();
     }
+    cwd.pop();
+    cwd.pop();
+
+    cwd.push(CONFIG_FILE);
+    let config = Config::from(&cwd).unwrap();
+    cwd.pop();
+
+    let link_file = build_sys::link_files(&cwd);
+    let link_lib = build_sys::link_lib(&cwd);
+    let opt_flags = build_sys::opt_flags(&profile, &config).unwrap();
+
+    let compilation_cmd = build_sys::full_compilation_cmd(&config, &profile, &link_file, &link_lib, &opt_flags)
+        .unwrap();
+
+    println!("{:?}", compilation_cmd);
+
+    let mut child = process::Command::new(&compilation_cmd[0])
+        .args(&compilation_cmd[1..])
+        .spawn()
+        .unwrap();
+
+    child.wait().unwrap();
 }
