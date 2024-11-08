@@ -14,3 +14,13 @@ Currently, Truffle only aims to support C/C++. Support for other systems level l
 Key areas currently being worked on:
 - **TrufC**: TrufC is the CLI tool that users will interact with when using Truffle to optimize their code. 
 - **TPGO 1 25M && TPGO 1 200M**: Truffle PGO (TPGO) are the models that will produce synthetic runtime data.
+
+---
+
+## Quick Start
+- You will interact with Truffle using TrufC. 
+```bash
+
+
+```
+- You can read the docs here: https://wistful-stone-a74.notion.site/TrufC-Documentation-138f4fffbb4980059e6bfd57a7ac89ba?pvs=4

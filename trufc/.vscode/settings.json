@@ -5,6 +5,7 @@
         "lcurl",
         "lssl",
         "pthread",
-        "Truf"
+        "Truf",
+        "trufc"
     ]
 }
