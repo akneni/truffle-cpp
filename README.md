@@ -7,7 +7,8 @@ Profile Guided Optimization (PGO) is a technique that uses a program's runtime d
 ---
 
 ## 🔭 Scope
-Currently, Truffle only aims to support C/C++. Support for other systems level languages may come in the far future. 
+- Currently, Truffle only aims to support C/C++. Support for other systems level languages may come in the far future. 
+- Truffle only supports Linux and Windows though WSL. MacOS support is on the roadmap. 
 
 ## 🚧 Work In Progress
 **Note:** Truffle is in a very early state and nearly everything is currently under active development.
@@ -18,9 +19,9 @@ Key areas currently being worked on:
 ---
 
 ## Quick Start
-- You will interact with Truffle using TrufC. 
+- You will interact with Truffle using TrufC. Download TrufC using the following script. Change `--user` to `--system` to install TrufC system wide. 
 ```bash
-
-
+curl https://raw.githubusercontent.com/akneni/truffle-cpp/refs/heads/main/trufc/scripts/install.py -o install.py
+python install.py --user
 ```
 - You can read the docs here: https://wistful-stone-a74.notion.site/TrufC-Documentation-138f4fffbb4980059e6bfd57a7ac89ba?pvs=4
