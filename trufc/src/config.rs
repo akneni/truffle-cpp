@@ -1,6 +1,8 @@
+use crate::utils::CompilerVersions;
+
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
-use std::{fs, collections::HashMap, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 use toml;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,6 +24,13 @@ pub struct Compiler {
     pub cpp: CompilerDetail,
 }
 
+impl Compiler {
+    #![allow(unused)]
+    pub fn from(ver: &CompilerVersions) {
+        todo!("implement this");
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompilerDetail {
     pub name: String,
@@ -35,7 +44,61 @@ pub struct Profile {
 }
 
 impl Config {
-    const RESERVED_PROFILES: [&str; 2] = ["dev", "release"];
+    const REQUIRED_PROFILES: [&str; 2] = ["dev", "release"];
+
+    pub fn new(proj_name: &str) -> Self {
+        let project = Project {
+            name: proj_name.to_string(),
+            version: "0.0.1".to_string(),
+        };
+
+        let compiler = Compiler {
+            c: CompilerDetail {
+                name: "gcc".to_string(),
+                version: "11.4.0".to_string(),
+                standard: "c23".to_string(),
+            },
+            cpp: CompilerDetail {
+                name: "g++".to_string(),
+                version: "11.4.0".to_string(),
+                standard: "c++23".to_string(),
+            },
+        };
+
+        let mut profile = HashMap::new();
+
+        profile.insert(
+            "dev".to_string(),
+            Profile {
+                flags: vec![
+                    "-g".to_string(),
+                    "-O0".to_string(),
+                    "-Wall".to_string(),
+                    "-fsanitize=undefined".to_string(),
+                ],
+            },
+        );
+
+        profile.insert(
+            "release".to_string(),
+            Profile {
+                flags: vec![
+                    "-Wall".to_string(),
+                    "-O3".to_string(),
+                    "-funroll-loops".to_string(),
+                    "-fprefetch-loop-arrays".to_string(),
+                    "-march=native".to_string(),
+                    "-ffast-math".to_string(),
+                ],
+            },
+        );
+
+        Config {
+            project,
+            compiler,
+            profile,
+        }
+    }
 
     pub fn from(path: &Path) -> Result<Self> {
         let toml_str = fs::read_to_string(path)?;
@@ -48,37 +111,11 @@ impl Config {
 
     pub fn validate_profiles(&self) -> Result<()> {
         for k in self.profile.keys() {
-            if Self::RESERVED_PROFILES.contains(&k.as_str()) {
-                return Err(anyhow!("cannot use reserved profile name `{}`", k));
+            if !Self::REQUIRED_PROFILES.contains(&k.as_str()) {
+                return Err(anyhow!("Missing required profile `{}`", k));
             }
         }
 
         Ok(())
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        let project = Project {
-            name: "c_cpp_project".to_string(),
-            version: "0.0.1".to_string(),
-        };
-
-        let compiler = Compiler {
-            c: CompilerDetail {
-                name: "gcc".to_string(), 
-                version: "11.4.0".to_string(),
-                standard: "c23".to_string(),
-            },
-            cpp: CompilerDetail {
-                name: "g++".to_string(), 
-                version: "11.4.0".to_string(),
-                standard: "c++23".to_string(),
-            },
-        };
-
-        let profile = HashMap::new();
-
-        Config { project, compiler, profile }
     }
 }

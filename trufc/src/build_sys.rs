@@ -1,24 +1,23 @@
-use crate::{config::Config, constants::CONFIG_FILE};
 use crate::utils;
+use crate::utils::Language;
+use crate::{config::Config, constants::CONFIG_FILE};
 
-use std::{fs, path::{Path, PathBuf}};
 use anyhow::{anyhow, Result};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
-pub fn create_project(path: &Path) -> Result<()> {
+pub fn create_project(path: &Path, lang: Language) -> Result<()> {
     let mut path_b = PathBuf::from(path);
     path_b.push(CONFIG_FILE);
     if path_b.exists() {
         return Err(anyhow!("directory is already a TrufC project."));
     }
 
-    let mut config = Config::default();
+    let dir_name = path.file_name().unwrap().to_str().unwrap();
 
-    let dir_name = path.file_name()
-        .unwrap()
-        .to_str()
-        .unwrap();
-
-    config.project.name = dir_name.to_string();
+    let config = Config::new(dir_name);
 
     let config_str = toml::to_string(&config)?;
 
@@ -29,10 +28,18 @@ pub fn create_project(path: &Path) -> Result<()> {
 
     fs::create_dir(&path_b).unwrap();
 
-    path_b.push("main.c");
-
-    let starter_code = "#include<stdio.h>\n\nint main() {\n\tprintf(\"Welcome to Truffle!\");\n\treturn 0;\n}";
-    fs::write(&path_b, starter_code)?;
+    match lang {
+        Language::C => {
+            path_b.push("main.c");
+            let starter_code = "#include<stdio.h>\n\nint main() {\n\tprintf(\"Welcome to Truffle!\\n\");\n\treturn 0;\n}";
+            fs::write(&path_b, starter_code)?;
+        }
+        Language::Cpp => {
+            path_b.push("main.cpp");
+            let starter_code = "#include<iostream>\n\nint main() {\n\tstd::cout << \"Welcome to Truffle!\\n\";\n\treturn 0;\n}";
+            fs::write(&path_b, starter_code)?;
+        }
+    }
 
     Ok(())
 }
@@ -84,51 +91,51 @@ pub fn link_lib(path: &Path) -> Vec<String> {
 }
 
 pub fn opt_flags(profile: &str, config: &Config) -> Result<Vec<String>> {
-    if profile == "--dev" {
-        return Ok(vec!["-g".to_string(), "-O0".to_string(), "-Wall".to_string(), "-fsanitize=undefined".to_string()]);
-    }
-    else if profile == "--release" {
-        return Ok(vec!["-O3".to_string(), "-funroll-loops".to_string(), "-fprefetch-loop-arrays".to_string(), "-march=native".to_string(), "-ffast-math".to_string()]);
-    }
+    // if profile == "--dev" {
+    //     return Ok(vec!["-g".to_string(), "-O0".to_string(), "-Wall".to_string(), "-fsanitize=undefined".to_string()]);
+    // }
+    // else if profile == "--release" {
+    //     return Ok(vec!["-O3".to_string(), "-funroll-loops".to_string(), "-fprefetch-loop-arrays".to_string(), "-march=native".to_string(), "-ffast-math".to_string()]);
+    // }
     let profile = &profile[2..];
 
     if let Some(prof) = config.profile.get(profile) {
         return Ok(prof.flags.clone());
     }
-    Err(anyhow!("profile `--{}` does not exist. Choose a different profile or declare it in TrufC.toml", profile))
+    Err(anyhow!(
+        "profile `--{}` does not exist. Choose a different profile or declare it in TrufC.toml",
+        profile
+    ))
 }
 
-pub fn full_compilation_cmd(config: &Config, profile: &str, link_file: &Vec<String>, link_lib: &Vec<String>, flags: &Vec<String>) -> Result<Vec<String>> {
-
+pub fn full_compilation_cmd(
+    config: &Config,
+    profile: &str,
+    link_file: &Vec<String>,
+    link_lib: &Vec<String>,
+    flags: &Vec<String>,
+) -> Result<Vec<String>> {
     let compiler: &str;
     let standard: &str;
 
     if link_file.contains(&"src/main.cpp".to_string()) {
-        compiler  = &config.compiler.cpp.name;
+        compiler = &config.compiler.cpp.name;
         standard = &config.compiler.cpp.standard;
-    }
-    else if link_file.contains(&"src/main.c".to_string()) {
-        compiler  = &config.compiler.c.name;
+    } else if link_file.contains(&"src/main.c".to_string()) {
+        compiler = &config.compiler.c.name;
         standard = &config.compiler.c.standard;
-    }
-    else {
+    } else {
         return Err(anyhow!("No `src/main.c` or `src/main.cpp` file found"));
     }
 
-    let mut command = vec![
-        compiler.to_string(),
-        format!("-std={}", standard),
-    ];
+    let mut command = vec![compiler.to_string(), format!("-std={}", standard)];
 
     command.extend_from_slice(flags);
 
     let profile = &profile[2..];
     let build_path = format!("build/{}/{}", profile, &config.project.name);
 
-    command.extend_from_slice(&[
-        "-o".to_string(),
-        build_path,
-    ]);
+    command.extend_from_slice(&["-o".to_string(), build_path]);
 
     command.extend_from_slice(link_file);
     command.extend_from_slice(link_lib);

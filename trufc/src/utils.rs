@@ -1,9 +1,15 @@
 use std::collections::HashSet;
 use std::fs;
-use std::process::{self, Command};
 use std::path::Path;
+use std::process::{self, Command};
 
 use anyhow::{anyhow, Result};
+
+#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
+pub enum Language {
+    C,
+    Cpp,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct CompilerVersions {
@@ -16,10 +22,10 @@ pub struct CompilerVersions {
 impl CompilerVersions {
     pub fn new() -> Result<Self> {
         let mut ver = CompilerVersions::default();
-    
+
         let compilers = ["gcc", "g++", "clang", "clang++"];
         let mut handles = vec![];
-    
+
         for c in compilers {
             let cmd = Command::new(c)
                 .arg("--version")
@@ -27,16 +33,14 @@ impl CompilerVersions {
                 .spawn();
             handles.push(cmd);
         }
-    
-    
+
         let mut stdout_vec = vec![];
         for h in handles {
             if let Ok(h) = h {
                 let process_res = h.wait_with_output();
                 if let Ok(out) = process_res {
                     if out.status.success() {
-                        let stdout = String::from_utf8(out.stdout)
-                            .unwrap();
+                        let stdout = String::from_utf8(out.stdout).unwrap();
                         stdout_vec.push(Some(stdout));
                         continue;
                     }
@@ -44,24 +48,24 @@ impl CompilerVersions {
             }
             stdout_vec.push(None);
         }
-    
+
         let gcc_installed = stdout_vec[..2].iter().all(|s| s.is_some());
         let clang_installed = stdout_vec[2..].iter().all(|s| s.is_some());
-    
+
         if !gcc_installed && !clang_installed {
             return Err(anyhow!("no version of gcc or clang found"));
         }
-    
+
         let fields = [&mut ver.gcc, &mut ver.gpp, &mut ver.clang, &mut ver.clangpp];
         for (field, out) in fields.into_iter().zip(stdout_vec.iter()) {
             if let Some(s) = out {
                 *field = Some(Self::parse_gc(s));
             }
         }
-    
+
         Ok(ver)
     }
-    
+
     fn parse_gc(out: &str) -> String {
         if out.starts_with("gcc") || out.starts_with("g++") {
             let first_line = out.split_once("\n").unwrap().0;
