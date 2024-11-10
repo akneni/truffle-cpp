@@ -23,13 +23,14 @@ def get_model_list() -> dict[str, dict[str, str]]:
     app_data = parse_cli('--app-data-path', required=False)
     json_path = os.path.join(app_data, 'model-list.json') if app_data is not None else None
 
+    model_lst_url = "https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/truf-pgo/dist/models/model-list.json"
     try:
-        models = requests.get('https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/truf-pgo/dist/model-list.json').json()
+        models = requests.get(model_lst_url).json()
         if json_path is not None:
             with open(json_path, 'w') as f:
                 f.write(json.dumps(models))
-    except Exception:
-        print("Warning: network connection unstable. Cannot get updated list of trufling models.\n\n")
+    except Exception as err:
+        print(f"Warning: network error. Cannot get updated list of trufling models: {err}\n\n")
         if json_path is not None:
             with open(json_path, 'r') as f:
                 models = f.read()
@@ -57,15 +58,13 @@ def infer_flags(model_path: str, source_path: str) -> list[str]:
     import torch_utils
     import utils
 
-    # print(f"{model_path = }")
-    # exit()
-
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = torch.device(device)
+
     model_name = os.path.basename(model_path)
 
-    model = torch.load(model_path).to(device)
+    model = torch_utils.FlagModel.from_disk(model_path, device).to(device)
     tokenizer = AutoTokenizer.from_pretrained(MODELS[model_name]['tokenizer'])
-
 
     sys_spec = utils.SystemSpec.generate()
     proj_source = ""
@@ -85,6 +84,7 @@ def infer_flags(model_path: str, source_path: str) -> list[str]:
     )
 
     in_tsr = torch_utils.InferenceUtils.tokenize(tokenizer, prompt)
+    in_tsr = {k:v.to(device) for k, v in in_tsr.items()}
 
     with torch.no_grad():
         out_tsr = model(in_tsr)

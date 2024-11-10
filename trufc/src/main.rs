@@ -93,7 +93,7 @@ fn main() {
             child.wait().unwrap();
         }
         cli::Commands::AiOpt { command } => {
-            ai_opt::handle_cli(command);
+            ai_opt::handle_cli(command).unwrap();
         }
     }
 }

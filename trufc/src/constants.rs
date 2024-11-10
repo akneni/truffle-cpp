@@ -19,11 +19,6 @@ pub static DATA_DIR: Lazy<&Path> = Lazy::new(|| {
         ),
     ];
 
-    #[cfg(debug_assertions)] {
-        let app_data = Path::new("/home/aknen/Documents/coding-projects/truffle-project/example-app-data/dist/");
-        return app_data;
-    }
-
     for (os, sys_path, user_path) in paths {
         if OS == os {
             if Path::new(sys_path).exists() {

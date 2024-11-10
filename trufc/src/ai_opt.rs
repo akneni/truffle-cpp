@@ -1,4 +1,4 @@
-use std::{fs, path::{Path, PathBuf}, process::{self, Command}};
+use std::{fs, process::{self, Command}};
 
 use anyhow::Result;
 
@@ -34,14 +34,23 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
             }
         }
         AiOptCommand::Pull { model } => {
+            let launch_cmd = build_pytrufc_cmd(&[
+                "pull",
+                "--app-data-path",
+                (*DATA_DIR).to_str().unwrap(),
+                "--model",
+                &model,
+            ]);
 
+            let mut child = Command::new(&launch_cmd[0])
+                .args(&launch_cmd[1..])
+                .current_dir(*DATA_DIR)
+                .spawn()?;
+            child.wait().unwrap();
         }
         AiOptCommand::Optimize => {
             // Get current directory as source path
             let mut source_path = std::env::current_dir()?;
-
-            let mut source_path = PathBuf::from("/home/aknen/Documents/coding-projects/truffle-project/c-test-proj/");
-
 
             source_path.push("src");
             let source_path_str = source_path
@@ -68,7 +77,7 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
             ]);
 
             println!("{:?}", launch_cmd);
-            std::process::exit(0);
+            // std::process::exit(0);
 
             // Execute the command and capture output
             let child = Command::new(&launch_cmd[0])
@@ -86,6 +95,9 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
             let out_str = String::from_utf8(output.stdout)?;
             let flags: Vec<String> = out_str
                 .trim()
+                .split("\n")
+                .last()
+                .unwrap()
                 .split("|||")
                 .map(|s| s.to_string())
                 .collect();
@@ -101,32 +113,13 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
     Ok(())
 }
 
+/// Build a command assuming it's process will be run 
+/// with a current working directory in the location of the `uv.lock` file
 fn build_pytrufc_cmd(args: &[&str]) -> Vec<String> {
-    let app_data = *DATA_DIR;
-
-    let app_data_str = app_data
-        .to_str()
-        .unwrap()
-        .to_string();
-
-    let uv = app_data.join("uv");
-    let uv_str = uv
-        .to_str()
-        .unwrap()
-        .to_string();
-
-    let py = app_data.join("pytrufc.py");
-    let py_str = py
-        .to_str()
-        .unwrap()
-        .to_string();
-
-
     let mut launch_cmd = vec![
-        // uv_str,
-        "uv".to_string(),
+        "./uv".to_string(),
         "run".to_string(),
-        py_str,
+        "pytrufc.py".to_string(),
     ];
 
     for arg in args {

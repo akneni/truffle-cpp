@@ -11,6 +11,7 @@ pub enum Language {
     Cpp,
 }
 
+#[allow(unused)]
 #[derive(Debug, Default, Clone)]
 pub struct CompilerVersions {
     gcc: Option<String>,
@@ -20,6 +21,7 @@ pub struct CompilerVersions {
 }
 
 impl CompilerVersions {
+    #[allow(unused)]
     pub fn new() -> Result<Self> {
         let mut ver = CompilerVersions::default();
 

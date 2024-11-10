@@ -3,12 +3,13 @@ from torch import nn
 import numpy as np
 from transformers.models.distilbert.modeling_distilbert import DistilBertModel
 from transformers.models.bert.modeling_bert import BertModel
+from transformers import DistilBertModel, BertModel
 import sys
 
 class FlagModel(nn.Module):
     def __init__(
             self, 
-            qwen_model: DistilBertModel | BertModel, 
+            language_model: DistilBertModel | BertModel, 
             num_flags: int, 
             *args, 
             **kwargs,
@@ -16,7 +17,7 @@ class FlagModel(nn.Module):
         super().__init__(*args, **kwargs)
 
         self.fc_in = nn.Linear(4096, 512)
-        self.language_model = qwen_model
+        self.language_model = language_model
         self.fc1 = nn.Linear(768, 32)
         self.fc2 = nn.Linear(32*512, 32)
 
@@ -39,6 +40,16 @@ class FlagModel(nn.Module):
         tsr = self.out(tsr)
 
         return tsr
+    
+    @staticmethod
+    def from_disk(path: str, device=None):
+        hf_model = DistilBertModel.from_pretrained("distilbert-base-uncased")
+        model = FlagModel(hf_model, len(InferenceUtils.FLAGS))
+        if device is None:
+            model.load_state_dict(torch.load(path))
+        else:
+            model.load_state_dict(torch.load(path, map_location=device, weights_only=True))
+        return model
 
 class InferenceUtils:
     FLAGS = [

@@ -85,10 +85,6 @@ impl Config {
                 flags: vec![
                     "-Wall".to_string(),
                     "-O3".to_string(),
-                    "-funroll-loops".to_string(),
-                    "-fprefetch-loop-arrays".to_string(),
-                    "-march=native".to_string(),
-                    "-ffast-math".to_string(),
                 ],
             },
         );
