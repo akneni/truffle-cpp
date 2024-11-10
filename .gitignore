@@ -9,8 +9,9 @@ truf-lang/target/
 # Truf-PGO
 truf-pgo/C-dataset/
 truf-pgo/benchmarking-dataset/
-truf-pgo/dist/models/
+truf-pgo/dist/models/*
 truf-pgo/dist/uv
+!truf-pgo/dist/models/model-list.json
 
 # TrufC
 trufc/target/
