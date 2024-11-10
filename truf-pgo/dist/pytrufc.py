@@ -1,10 +1,8 @@
 import sys
 import os
 import subprocess
-import torch
-import utils
-import torch_utils
-from transformers import AutoTokenizer
+import requests
+import json
 
 def parse_cli(flag: str, required=True) -> str:
     for i, arg in enumerate(sys.argv):
@@ -18,12 +16,27 @@ def parse_cli(flag: str, required=True) -> str:
         exit(1)
     return None
 
-MODELS = {
-    "trufling-flags-70M.pt": {
-        "url": "https://ucarecdn.com/6b12fe30-14ff-46a8-ab7e-3ae7e74b9776/truflingflags70M.pt",
-        "tokenizer": "distilbert-base-uncased",
-    }
-}
+def get_model_list() -> dict[str, dict[str, str]]:
+    """
+    returns `{model_name: {url: str, tokenizer: str}}`
+    """
+    app_data = parse_cli('--app-data-path', required=False)
+    json_path = os.path.join(app_data, 'model-list.json') if app_data is not None else None
+
+    try:
+        models = requests.get('https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/truf-pgo/dist/model-list.json').json()
+        if json_path is not None:
+            with open(json_path, 'w') as f:
+                f.write(json.dumps(models))
+    except Exception:
+        print("Warning: network connection unstable. Cannot get updated list of trufling models.\n\n")
+        if json_path is not None:
+            with open(json_path, 'r') as f:
+                models = f.read()
+            models = json.loads(models)
+        else:
+            exit(1)
+    return models
 
 def pull_model(model: str, app_data_path: str):
     model_dir_path = os.path.join(app_data_path, 'models')
@@ -39,8 +52,16 @@ def pull_model(model: str, app_data_path: str):
     print("finished downloading model")
 
 def infer_flags(model_path: str, source_path: str) -> list[str]:
+    import torch
+    from transformers import AutoTokenizer
+    import torch_utils
+    import utils
+
+    # print(f"{model_path = }")
+    # exit()
+
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model_name = os.path.basename(model_name)
+    model_name = os.path.basename(model_path)
 
     model = torch.load(model_path).to(device)
     tokenizer = AutoTokenizer.from_pretrained(MODELS[model_name]['tokenizer'])
@@ -69,6 +90,8 @@ def infer_flags(model_path: str, source_path: str) -> list[str]:
         out_tsr = model(in_tsr)
     flags = torch_utils.InferenceUtils.gen_flags(out_tsr)
     return flags
+
+MODELS = get_model_list()
 
 if __name__ == '__main__':
     if len(sys.argv) <= 1:
@@ -99,7 +122,7 @@ if __name__ == '__main__':
         else:
             print("Model specified hasn't been downloaded. ")
 
-
+        model_path = os.path.join(model_dir_path, model_path)
         flags = infer_flags(model_path, source_path)
         print("|||".join(flags))
 
@@ -114,5 +137,9 @@ if __name__ == '__main__':
         
         pull_model(model, app_data_path)
 
-
+    elif command == 'list-models':
+        print('|||'.join(MODELS.keys()))
+    
+    else:
+        print(f"Error: Command `{command}` is invalid")
     

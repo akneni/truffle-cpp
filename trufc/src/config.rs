@@ -109,6 +109,11 @@ impl Config {
         Ok(config)
     }
 
+    pub fn to_disk(&self, path: &Path) {
+        let s = toml::to_string(&self).unwrap();
+        fs::write(path, s).unwrap();
+    }
+
     pub fn validate_profiles(&self) -> Result<()> {
         for k in self.profile.keys() {
             if !Self::REQUIRED_PROFILES.contains(&k.as_str()) {

@@ -1,70 +1,23 @@
 mod build_sys;
 mod config;
 mod constants;
+mod ai_opt;
+mod cli;
 mod utils;
 
-use std::{env, fs, process};
-
-use clap::{Parser, Subcommand};
-use config::Config;
 use constants::CONFIG_FILE;
-
-#[derive(Parser, Debug)]
-#[command(name = "TrufC")]
-#[command(version = "0.0.3")]
-#[command(about = "A build system that integrates with truffle optimizations.", long_about = None)]
-struct CliCommand {
-    #[command(subcommand)]
-    command: Commands,
-}
-
-#[derive(Subcommand, Debug)]
-enum Commands {
-    Init {
-        #[arg(value_enum, long, default_value = "c")]
-        language: utils::Language,
-    },
-    New {
-        proj_name: String,
-
-        #[arg(value_enum, long, default_value = "c")]
-        language: utils::Language,
-    },
-
-    // Clap doesn't provide any way to structure the syntax to be `trufc run --profile
-    // So, we'll have to paese these manually.
-    Build {
-        profile: String,
-    },
-    Run {
-        profile: String,
-        args: Vec<String>,
-    },
-}
-
-impl Commands {
-    fn new(variant: &str, profile: &str, args: Vec<String>) -> Self {
-        match variant {
-            "build" => Self::Build {
-                profile: profile.to_string(),
-            },
-            "run" => Self::Run {
-                profile: profile.to_string(),
-                args,
-            },
-            _ => panic!("Parameter `variant` must be one of 'build' or 'run'"),
-        }
-    }
-}
+use config::Config;
+use std::{env, fs, process};
+use clap::Parser;
 
 fn main() {
-    let cli: CliCommand;
+    let cli_args: cli::CliCommand;
 
     let raw_cli_args = std::env::args().collect::<Vec<String>>();
 
     if raw_cli_args.len() < 2 {
         // Let the program fail and have Clap display it's help message
-        cli = CliCommand::parse();
+        cli_args = cli::CliCommand::parse();
     } else if raw_cli_args[1] == "run" || raw_cli_args[1] == "build" {
         let mut profile = "--dev".to_string();
         let mut args = vec![];
@@ -78,15 +31,15 @@ fn main() {
             assert!(raw_cli_args.len() <= 3);
         }
 
-        cli = CliCommand {
-            command: Commands::new(&raw_cli_args[1], &profile, args),
+        cli_args = cli::CliCommand {
+            command: cli::Commands::new(&raw_cli_args[1], &profile, args),
         }
     } else {
-        cli = CliCommand::parse();
+        cli_args = cli::CliCommand::parse();
     }
 
-    match cli.command {
-        Commands::Init { language } => {
+    match cli_args.command {
+        cli::Commands::Init { language } => {
             let cwd = env::current_dir().unwrap();
 
             if let Err(e) = build_sys::create_project(&cwd, language) {
@@ -94,7 +47,7 @@ fn main() {
                 process::exit(1);
             }
         }
-        Commands::New {
+        cli::Commands::New {
             proj_name,
             language,
         } => {
@@ -110,10 +63,10 @@ fn main() {
                 println!("An error occurred while creating the project:\n{}", e);
             }
         }
-        Commands::Build { profile } => {
+        cli::Commands::Build { profile } => {
             handle_build(profile);
         }
-        Commands::Run { profile, args } => {
+        cli::Commands::Run { profile, args } => {
             handle_build(profile.clone());
 
             let mut cwd = env::current_dir().unwrap();
@@ -138,6 +91,9 @@ fn main() {
             }
             let mut child = child.spawn().unwrap();
             child.wait().unwrap();
+        }
+        cli::Commands::AiOpt { command } => {
+            ai_opt::handle_cli(command);
         }
     }
 }
