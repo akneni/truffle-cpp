@@ -3,14 +3,35 @@ import os
 import sys
 import platform
 import urllib.request
+import tarfile
 
 URL = 'https://ucarecdn.com/c98cc117-b9c3-43f6-9d12-5668679e5a6b/trufcv00.4linuxx84_64'
+PY_DEPS_URL = 'https://ucarecdn.com/e4eeb39a-9211-4452-97bc-55227e5c29b4/distv004tar.gz'
 
 USER_BIN = os.path.expanduser('~/.local/bin')
 SYSTEM_BIN = '/usr/bin'
 
 USER_APP_DATA = '/usr/share/'
 SYSTEM_APP_DATA = os.path.expanduser('~/.local/share/')
+
+def install_python_deps(install_mode: str, exist_ok=True):
+    app_data = USER_APP_DATA if install_mode == '--user' else SYSTEM_APP_DATA
+    app_data = os.path.join(app_data, 'trufc')
+
+    if os.path.exists(app_data) and not exist_ok:
+        print('TrufC already exists on your machine.')
+        exit()
+
+    # Download binary
+    print(f"Downloading to {app_data}")
+    os.makedirs(app_data, exist_ok=True)
+
+    zip_path = os.path.join(app_data, "dist.tar.gz")
+    urllib.request.urlretrieve(URL, zip_path)
+    
+    with tarfile.open(zip_path, "r:gz") as tar:
+        tar.extractall(path=app_data)
+    
 
 def install(install_mode: str):
     path = USER_BIN if install_mode == '--user' else SYSTEM_BIN
@@ -37,6 +58,9 @@ def install(install_mode: str):
 
     # Create the app data directory
     os.makedirs(app_data, exist_ok=True)
+
+    # Install the python deps
+    install_python_deps(install_mode)
 
 def uninstall():
     for path in [USER_BIN, SYSTEM_BIN]:
