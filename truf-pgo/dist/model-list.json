@@ -1,0 +1,6 @@
+ {
+    "trufling-flags-70M.pt": {
+        "url": "https://ucarecdn.com/6b12fe30-14ff-46a8-ab7e-3ae7e74b9776/truflingflags70M.pt",
+        "tokenizer": "distilbert-base-uncased"
+    }
+}

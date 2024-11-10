@@ -1,7 +1,16 @@
-truf-lang/target/
-trufc/target/
-truf-pgo/C-dataset/
-truf-pgo/benchmarking-dataset/
+# Universal
 **/.venv/
 **/__pycache__/
 **/*.ipynb
+
+# Truf Lang
+truf-lang/target/
+
+# Truf-PGO
+truf-pgo/C-dataset/
+truf-pgo/benchmarking-dataset/
+truf-pgo/dist/models/
+truf-pgo/dist/uv
+
+# TrufC
+trufc/target/
