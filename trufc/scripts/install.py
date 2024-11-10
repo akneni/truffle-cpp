@@ -27,7 +27,7 @@ def install_python_deps(install_mode: str, exist_ok=True):
     os.makedirs(app_data, exist_ok=True)
 
     zip_path = os.path.join(app_data, "dist.tar.gz")
-    urllib.request.urlretrieve(URL, zip_path)
+    urllib.request.urlretrieve(PY_DEPS_URL, zip_path)
     
     with tarfile.open(zip_path, "r:gz") as tar:
         tar.extractall(path=app_data)
