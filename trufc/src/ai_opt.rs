@@ -11,7 +11,7 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
             let launch_cmd = build_pytrufc_cmd(&[
                 "list-models"
             ]);
-            let app_data = *DATA_DIR;
+            let app_data = &(*DATA_DIR);
 
             let child = Command::new(&launch_cmd[0])
                 .args(&launch_cmd[1..])
@@ -44,7 +44,7 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
 
             let mut child = Command::new(&launch_cmd[0])
                 .args(&launch_cmd[1..])
-                .current_dir(*DATA_DIR)
+                .current_dir(&(*DATA_DIR))
                 .spawn()?;
             child.wait().unwrap();
         }
@@ -64,7 +64,7 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
             let mut config = Config::from(source_path.as_path())?;
             
 
-            let app_data = *DATA_DIR;
+            let app_data = &(*DATA_DIR);
             let app_data_str = app_data.to_str().unwrap();
 
             // Build the command
@@ -76,23 +76,30 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
                 app_data_str,
             ]);
 
-            println!("{:?}", launch_cmd);
-            // std::process::exit(0);
-
             // Execute the command and capture output
             let child = Command::new(&launch_cmd[0])
                 .args(&launch_cmd[1..])
                 .current_dir(app_data)
                 .stdout(process::Stdio::piped())
                 .spawn()?;
+            println!("Choosing optimal compiler flags...");
 
             let output = child.wait_with_output()?;
             if !output.status.success() {
                 // The command failed
-                eprintln!("Error: pytrufc.py inference command failed");
+                let err = String::from_utf8(output.stderr)
+                    .unwrap_or("non-utf-8 error message from pytrufc.py".to_string());
+                let output_str = String::from_utf8(output.stdout)
+                .unwrap_or("non-utf-8 output message from pytrufc.py".to_string());
+                eprintln!("Error: pytrufc.py inference command failed:\nOutput:`{}`\nError:`{}`\n", err, output_str);
                 return Err(anyhow::anyhow!("pytrufc.py inference command failed"));
             }
             let out_str = String::from_utf8(output.stdout)?;
+            if out_str.trim().starts_with("STDOUT-PASSTHROUGH") {
+                println!("{}", out_str.split("\n").skip(1).collect::<Vec<&str>>().join("\n"));
+                process::exit(0);
+            }
+
             let flags: Vec<String> = out_str
                 .trim()
                 .split("\n")
@@ -102,11 +109,11 @@ pub fn handle_cli(command: AiOptCommand) -> Result<()> {
                 .map(|s| s.to_string())
                 .collect();
 
-            // Print the generated flags
-            println!("Generated flags: {:?}", flags);
+            println!("Flags chosen: {}", flags.join(" "));
 
             config.profile.insert("release".to_string(), config::Profile { flags });
             config.to_disk(source_path.as_path());
+
         }
     }
 
@@ -132,7 +139,7 @@ fn build_pytrufc_cmd(args: &[&str]) -> Vec<String> {
 fn get_installed_models() -> Vec<String> {
     let mut models = vec![];
 
-    let app_data = *DATA_DIR;
+    let app_data = &(*DATA_DIR);
 
     let model_dir = app_data.join("models");
 

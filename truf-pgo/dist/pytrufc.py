@@ -108,12 +108,14 @@ if __name__ == '__main__':
             print("Model specified ")
 
         model_dir_path = os.path.join(app_data_path, 'models')
+        os.makedirs(model_dir_path, exist_ok=True)
         existing_models = os.listdir(model_dir_path)
         if len(existing_models) == 0:
+            print("STDOUT-PASSTHROUGH")
             print("You haven't downloaded any models yet. Available models are: ")
             for i, model in enumerate(MODELS.keys()):
                 print(f"{i:<2}) {model[:-3]}")
-            exit(1)
+            exit(0)
         
         if target_model is None:
             model_path = existing_models[0]

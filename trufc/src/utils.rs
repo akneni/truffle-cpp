@@ -106,3 +106,17 @@ pub fn extract_include_statements(path: &Path) -> Vec<String> {
 
     includes.into_iter().collect()
 }
+
+pub fn expand_user(path: &str) -> String {
+    if path.starts_with("~/") {
+        if let Some(home_dir) = std::env::var_os("HOME") {
+            let path_without_tilde = &path[2..]; // Remove "~/" prefix
+            return Path::new(&home_dir)
+                .join(path_without_tilde)
+                .to_str()
+                .unwrap()
+                .to_string();
+        }
+    }
+    path.to_string()
+}
