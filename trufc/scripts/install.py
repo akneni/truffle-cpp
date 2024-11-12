@@ -11,8 +11,8 @@ PY_DEPS_URL = 'https://ucarecdn.com/e4eeb39a-9211-4452-97bc-55227e5c29b4/distv00
 USER_BIN = os.path.expanduser('~/.local/bin')
 SYSTEM_BIN = '/usr/bin'
 
-USER_APP_DATA = '/usr/share/'
-SYSTEM_APP_DATA = os.path.expanduser('~/.local/share/')
+USER_APP_DATA = os.path.expanduser('~/.local/share/')
+SYSTEM_APP_DATA = '/usr/share/'
 
 def install_python_deps(install_mode: str, exist_ok=True):
     app_data = USER_APP_DATA if install_mode == '--user' else SYSTEM_APP_DATA
@@ -54,7 +54,7 @@ def install(install_mode: str):
     urllib.request.urlretrieve(URL, path_bin)
     
     # Make the binary executable
-    os.chmod(path, 0o755)
+    os.chmod(path_bin, 0o755)
 
     # Create the app data directory
     os.makedirs(app_data, exist_ok=True)
