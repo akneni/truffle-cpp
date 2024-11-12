@@ -9,9 +9,9 @@ URL = 'https://ucarecdn.com/c98cc117-b9c3-43f6-9d12-5668679e5a6b/trufcv00.4linux
 PY_DEPS_URL = 'https://ucarecdn.com/e4eeb39a-9211-4452-97bc-55227e5c29b4/distv004tar.gz'
 
 USER_BIN = os.path.expanduser('~/.local/bin')
-SYSTEM_BIN = '/usr/bin'
-
 USER_APP_DATA = os.path.expanduser('~/.local/share/')
+
+SYSTEM_BIN = '/usr/bin'
 SYSTEM_APP_DATA = '/usr/share/'
 
 def install_python_deps(install_mode: str, exist_ok=True):
@@ -41,7 +41,7 @@ def install(install_mode: str):
     app_data = os.path.join(app_data, 'trufc')
 
     if os.path.exists(path_bin):
-        res = input('TrufC already exists on your machine. Reinstall? (y/[n])')
+        res = input('TrufC already exists on your machine. Reinstall? (y/[n]): ')
         if res.lower().strip() != 'y':
             print("Exiting...")
             exit()
@@ -56,10 +56,8 @@ def install(install_mode: str):
     # Make the binary executable
     os.chmod(path_bin, 0o755)
 
-    # Create the app data directory
+    # Create the app data directory and install python deps
     os.makedirs(app_data, exist_ok=True)
-
-    # Install the python deps
     install_python_deps(install_mode)
 
 def uninstall():

@@ -22,6 +22,6 @@ Key areas currently being worked on:
 - You will interact with Truffle using TrufC. Download TrufC using the following script. Change `--user` to `--system` to install TrufC system wide. 
 ```bash
 curl https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/trufc/scripts/install.py -o install.py
-sudo python3 install.py --user
+python3 install.py --user
 ```
 - You can read the docs here: https://wistful-stone-a74.notion.site/TrufC-Documentation-138f4fffbb4980059e6bfd57a7ac89ba?pvs=4
