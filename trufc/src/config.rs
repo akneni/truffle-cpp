@@ -56,12 +56,12 @@ impl Config {
             c: CompilerDetail {
                 name: "gcc".to_string(),
                 version: "11.4.0".to_string(),
-                standard: "c23".to_string(),
+                standard: "c17".to_string(),
             },
             cpp: CompilerDetail {
                 name: "g++".to_string(),
                 version: "11.4.0".to_string(),
-                standard: "c++23".to_string(),
+                standard: "c++17".to_string(),
             },
         };
 
