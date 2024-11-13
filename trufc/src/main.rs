@@ -5,6 +5,7 @@ mod ai_opt;
 mod cli;
 mod utils;
 
+use anyhow::{anyhow, Result};
 use constants::CONFIG_FILE;
 use config::Config;
 use std::{env, fs, process};
@@ -64,10 +65,13 @@ fn main() {
             }
         }
         cli::Commands::Build { profile } => {
-            handle_build(profile);
+            handle_build(profile).unwrap();
         }
         cli::Commands::Run { profile, args } => {
-            handle_build(profile.clone());
+            if let Err(e) = handle_build(profile.clone()) {
+                println!("Compilation Failed: {}", e);
+                process::exit(1);
+            }
 
             let mut cwd = env::current_dir().unwrap();
 
@@ -98,7 +102,7 @@ fn main() {
     }
 }
 
-fn handle_build(profile: String) {
+fn handle_build(profile: String) -> Result<()> {
     if !profile.starts_with("--") {
         println!("Error: profile must start with `--`");
         process::exit(1);
@@ -125,10 +129,16 @@ fn handle_build(profile: String) {
         build_sys::full_compilation_cmd(&config, &profile, &link_file, &link_lib, &opt_flags)
             .unwrap();
 
-    let mut child = process::Command::new(&compilation_cmd[0])
+    let child = process::Command::new(&compilation_cmd[0])
         .args(&compilation_cmd[1..])
-        .spawn()
-        .unwrap();
+        .stdout(process::Stdio::inherit())
+        .stderr(process::Stdio::inherit())
+        .stdin(process::Stdio::inherit())
+        .output()?;
 
-    child.wait().unwrap();
+    if !child.status.success() {
+        return Err(anyhow!("Compilation command exited with non-zero exit code"));
+    }
+
+    Ok(())
 }

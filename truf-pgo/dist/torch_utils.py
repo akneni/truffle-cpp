@@ -10,11 +10,14 @@ class FlagModel(nn.Module):
     def __init__(
             self, 
             language_model: DistilBertModel | BertModel, 
+            num_tokens: int,
             num_flags: int, 
             *args, 
             **kwargs,
         ) -> None:
         super().__init__(*args, **kwargs)
+
+        self.num_tokens = num_tokens - 1
 
         self.fc_in = nn.Linear(4096, 512)
         self.language_model = language_model
@@ -25,7 +28,8 @@ class FlagModel(nn.Module):
 
     def forward(self, tokens: dict) -> torch.Tensor:
         tsr = self.fc_in(tokens['input_ids'].to(torch.float32))
-        tsr = torch.relu(tsr)
+        
+        tsr = torch.sigmoid(tsr) * self.num_tokens
         tsr  = tsr.to(torch.long)
 
         tsr = self.language_model(input_ids=tsr, attention_mask=torch.ones_like(tsr)).last_hidden_state
