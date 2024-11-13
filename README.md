@@ -6,6 +6,9 @@ The Truffle project includes several different aspects to make C/C++ easier, saf
 The Trufling models are able to read C/C++ source code, and generate optimal compiler flags for speed or safety. They will soon also be able to generate synthetic runtime data for a program to help the compiler further optimize the code. Currently, these models are improve the runtime performance of C by 5%-30% (average of 12%).
 
 
+## Dataset
+- The dataset used to train the Trufling models can be found on Kaggle or by [clicking here](https://www.kaggle.com/datasets/anishkanthamneni/c-gcc-benchmarking).
+
 ---
 
 ## 🔭 Scope
@@ -16,7 +19,7 @@ The Trufling models are able to read C/C++ source code, and generate optimal com
 **Note:** Truffle is in a very early state and nearly everything is currently under active development.
 Key areas currently being worked on:
 - **TrufC**: TrufC is the CLI tool that users will interact with when using Truffle to optimize their code. 
-- **Trufling 1 70M**: The Trufling are the models that will produce synthetic runtime data and generate optimal compiler flags.
+- **Trufling 1 70M**: The Trufling models produce synthetic runtime data and generate optimal compiler flags.
 
 ---
 
