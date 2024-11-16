@@ -8,10 +8,27 @@ struct FunctionMap {
 impl FunctionMap {
     fn new() -> Self {
         let map: HashMap<String, String> = [
+            // String Functions
             ("strcpy".to_string(), "strncpy".to_string()),
             ("strcat".to_string(), "strncat".to_string()),
+            ("strtok".to_string(), "strtok_r".to_string()),
+            ("vsprintf".to_string(), "vsnprintf".to_string()),
+
+            // I/O Functions
             ("gets".to_string(), "fgets".to_string()),
             ("sprintf".to_string(), "snprintf".to_string()),
+            
+            // DType conversions
+            ("atoi".to_string(), "strtol".to_string()),
+            ("atol".to_string(), "strtol".to_string()),
+            ("atoll".to_string(), "strtoll".to_string()),
+            ("atof".to_string(), "strtof".to_string()),
+
+            // Time related functions
+            ("gmtime".to_string(), "gmtime_r".to_string()),
+            ("localtime".to_string(), "localtime_r".to_string()),
+            ("ctime".to_string(), "ctime_r".to_string()),
+            ("asctime".to_string(), "asctime_r".to_string()),
         ].into_iter().collect();
 
         Self {map}
