@@ -30,3 +30,8 @@ curl https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/trufc/scri
 python3 install.py --user
 ```
 - You can read the docs here: https://wistful-stone-a74.notion.site/TrufC-Documentation-138f4fffbb4980059e6bfd57a7ac89ba?pvs=4
+- Uninstalling TrufC (use `--remove` to keep related files and only remove the binary)
+```bash
+curl https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/trufc/scripts/install.py -o install.py
+python3 install.py purge
+```
