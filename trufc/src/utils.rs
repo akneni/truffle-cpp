@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::{self, Command};
 
 use anyhow::{anyhow, Result};
+use colored::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
 pub enum Language {
@@ -120,3 +121,24 @@ pub fn expand_user(path: &str) -> String {
     }
     path.to_string()
 }
+
+/// Prints a warning message in a standardized way
+pub fn print_warning(
+    warning_source: &str,
+    filename: &str,
+    line: &str,
+    warning_type: &str,
+    msg: &str,
+) {
+    let err_msg = format!(
+        "{} {} [src/{} | Line {} ]: {:?}\n{}", 
+        warning_source.red().bold(),
+        "Warning".red().bold(),
+        filename, 
+        line, 
+        warning_type, 
+        msg,
+    );
+    println!("{}\n", err_msg);
+}
+

@@ -1,5 +1,7 @@
-use std::{collections::HashMap, env, fmt::Debug, fs, sync::{Arc, Mutex}};
+use std::{collections::HashMap, env, fmt::Debug, fs, process::{self, Command}, sync::{Arc, Mutex}};
 use anyhow::{anyhow, Result};
+
+use crate::{constants::VALGRIND_OUT, utils, valgrind::VgOutput};
 
 struct FunctionMap {
     map: HashMap<String, String>,
@@ -62,28 +64,16 @@ impl FunctionMap {
 }
 
 #[derive(Debug)]
-enum WarningType {
+pub enum WarningType {
     UnsafeFunction
 }
 
 #[derive(Debug)]
 pub struct Warning {
-    msg: String,
-    filename: String,
-    line: usize,
-    warning_type: WarningType
-}
-
-impl Warning {
-    pub fn to_string(&self) -> String {
-        format!(
-            "TrufC Warning [src/{} | Line {} ]: {:?}\n{}", 
-            self.filename, 
-            self.line, 
-            self.warning_type, 
-            self.msg
-        )
-    }
+    pub msg: String,
+    pub filename: String,
+    pub line: usize,
+    pub warning_type: WarningType
 }
 
 pub fn check_files(source_type: &str) -> Result<Vec<Warning>> {
@@ -153,4 +143,84 @@ fn scan_file(filename: &str, source_code: &str, func_map: &FunctionMap) ->Vec<Wa
     }
 
     warnings
+}
+
+
+/// Executes a binary (merges Stdio to the current process) and
+/// returns a string of Valgrind's results and the number of lines
+/// output by the underlying program
+pub fn exec_w_valgrind(bin_path: &str, passthough_args: &Vec<String>) -> Result<VgOutput> {
+    
+    // let log_file = format!("--log-file={}", VALGRIND_OUT);
+    let log_file = format!("--xml-file={}", VALGRIND_OUT);
+
+    let mut valgrind_args = vec![
+        &log_file, 
+        "--leak-check=full",
+        "--track-origins=yes",
+        "--xml=yes",
+        bin_path
+    ];
+
+    for arg in passthough_args {
+        valgrind_args.push(arg.as_str());
+    }
+
+    let output = Command::new("valgrind")
+        .args(valgrind_args)
+        .stdin(process::Stdio::inherit())
+        .stdout(process::Stdio::inherit())
+        .stderr(process::Stdio::inherit())
+        .output()
+        .map_err(|e| anyhow!("Failed to run valgrind binary: {}", e));
+
+    if let Err(e) = output {
+        println!("Error spawning valgrind process: {}", e);
+        println!("Make sure you have valgrind installed");
+        println!("Debian Based  => sudo apt-get install valgrind");
+        println!("Arch Based    => sudo dnf install valgrind");
+        println!("Fedora Based  => sudo pacman -S valgrind");
+        std::process::exit(1);
+    }
+
+    let valgrind_out = fs::read_to_string(VALGRIND_OUT)
+        .map_err(|err| anyhow!("Error reading from file: {}", err))?;
+
+    if fs::exists(VALGRIND_OUT).map_err(|err| anyhow!("Error checking if file exists: {}", err))? {
+        fs::remove_file(VALGRIND_OUT)
+            .map_err(|err| anyhow!("Error removing file: {}", err))?;
+    }
+
+    VgOutput::from_str(&valgrind_out)
+        .map_err(|err| anyhow!("Error parsing Valgrind: {}", err))
+}
+
+
+/// Returns a vector of human readable error messages 
+/// meant for the end user of TrufC to see
+pub fn print_vg_errors(vg_output: &VgOutput) {
+    for err in &vg_output.errors {
+        let mut filename = "UKNOWN".to_string();
+        let mut line = "??".to_string();
+
+        for stack in err.stack.frames.iter() {
+            for frame in stack {
+                if let Some(file) = frame.file.as_ref() {
+                    filename = file.clone();
+                }
+                if let Some(&line_no) = frame.line.as_ref() {
+                    line = format!("{}", line_no);
+                }
+            }
+        }
+
+        utils::print_warning(
+            "Valgrind", 
+            &filename, 
+            &line, 
+            &err.kind, 
+            &err.xwhat.text
+        );
+    }
+
 }

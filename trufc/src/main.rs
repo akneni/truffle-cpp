@@ -2,15 +2,17 @@ mod build_sys;
 mod safety;
 mod config;
 mod constants;
+mod valgrind;
 mod ai_opt;
 mod cli;
 mod utils;
 
 use anyhow::{anyhow, Result};
-use constants::CONFIG_FILE;
+use constants::{CONFIG_FILE, SEPETATOR};
 use config::Config;
-use std::{env, fs, process};
+use std::{env, fs, process, io::{self, Write}};
 use clap::Parser;
+use crossterm::{execute, ExecutableCommand, cursor, queue, QueueableCommand, style, terminal};
 
 fn main() {
     let cli_args: cli::CliCommand;
@@ -75,8 +77,8 @@ fn main() {
         }
         cli::Commands::Run { profile, args } => {
             let config = config.unwrap();
-            
-            handle_warnings(&config).unwrap();
+
+            let warnings = handle_warnings(&config).unwrap();
             if let Err(e) = handle_build(profile.clone(), &config) {
                 println!("Compilation Failed: {}", e);
                 process::exit(1);
@@ -89,17 +91,12 @@ fn main() {
             cwd.push(config.project.name);
 
             let bin = cwd.to_str().unwrap();
+            let valgrind_out = safety::exec_w_valgrind(bin, &args).unwrap();
 
-            // Spawn the compiled binary and pass any arguments if necessary
-            let mut child_builder = process::Command::new(bin);
-            let child: &mut process::Command;
-            if args.len() > 0 {
-                child = child_builder.args(&args);
-            } else {
-                child = &mut child_builder;
+            if valgrind_out.errors.len() > 0 {
+                println!("{}\n", *SEPETATOR);
+                safety::print_vg_errors(&valgrind_out);        
             }
-            let mut child = child.spawn().unwrap();
-            child.wait().unwrap();
         }
         cli::Commands::AiOpt { command } => {
             ai_opt::handle_cli(command).unwrap();
@@ -107,12 +104,24 @@ fn main() {
     }
 }
 
-fn handle_warnings(config: &Config) -> Result<()> {
+/// Returns true if there were warnings and false if there was no warnings.
+fn handle_warnings(config: &Config) -> Result<Vec<safety::Warning>> {
     let warnings = safety::check_files(&config.project.language)?;
+
     for w in &warnings  {
-        println!("{}\n\n", w.to_string());
+        utils::print_warning(
+            "TrufC", 
+            &w.filename, 
+            &format!("{}", w.line), 
+            &format!("{:?}", w.warning_type), 
+            &w.msg,
+        );
     }
-    Ok(())
+    if warnings.len() > 0 {
+        println!("{}", *SEPETATOR);
+    }
+
+    Ok(warnings)
 }
 
 fn handle_build(profile: String, config: &Config) -> Result<()> {
