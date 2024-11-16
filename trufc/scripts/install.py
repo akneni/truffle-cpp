@@ -5,7 +5,7 @@ import platform
 import urllib.request
 import tarfile
 
-URL = 'https://ucarecdn.com/a3f52cc9-2301-4a95-b154-d77180d25876/trufcv00.5linuxx86_64'
+URL = 'https://ucarecdn.com/fda93a88-d651-4a28-8056-55527e30b454/trufcv00.6linuxx86_64'
 PY_DEPS_URL = 'https://ucarecdn.com/c8e36394-d392-41ad-9fae-ae3535097c07/distv005tar.gz'
 
 USER_BIN = os.path.expanduser('~/.local/bin')
