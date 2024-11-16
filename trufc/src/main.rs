@@ -1,4 +1,5 @@
 mod build_sys;
+mod safety;
 mod config;
 mod constants;
 mod ai_opt;
@@ -13,9 +14,7 @@ use clap::Parser;
 
 fn main() {
     let cli_args: cli::CliCommand;
-
     let raw_cli_args = std::env::args().collect::<Vec<String>>();
-
     if raw_cli_args.len() < 2 {
         // Let the program fail and have Clap display it's help message
         cli_args = cli::CliCommand::parse();
@@ -38,6 +37,10 @@ fn main() {
     } else {
         cli_args = cli::CliCommand::parse();
     }
+
+    let mut cwd = env::current_dir().unwrap();
+    cwd.push(CONFIG_FILE);
+    let config = Config::from(&cwd);
 
     match cli_args.command {
         cli::Commands::Init { language } => {
@@ -65,19 +68,21 @@ fn main() {
             }
         }
         cli::Commands::Build { profile } => {
-            handle_build(profile).unwrap();
+            let config = config.unwrap();
+
+            handle_warnings(&config).unwrap();
+            handle_build(profile, &config).unwrap();
         }
         cli::Commands::Run { profile, args } => {
-            if let Err(e) = handle_build(profile.clone()) {
+            let config = config.unwrap();
+            
+            handle_warnings(&config).unwrap();
+            if let Err(e) = handle_build(profile.clone(), &config) {
                 println!("Compilation Failed: {}", e);
                 process::exit(1);
             }
 
             let mut cwd = env::current_dir().unwrap();
-
-            cwd.push(CONFIG_FILE);
-            let config = Config::from(&cwd).unwrap();
-            cwd.pop();
 
             cwd.push("build");
             cwd.push(&profile[2..]);
@@ -102,7 +107,15 @@ fn main() {
     }
 }
 
-fn handle_build(profile: String) -> Result<()> {
+fn handle_warnings(config: &Config) -> Result<()> {
+    let warnings = safety::check_files(&config.project.language)?;
+    for w in &warnings  {
+        println!("{}\n\n", w.to_string());
+    }
+    Ok(())
+}
+
+fn handle_build(profile: String, config: &Config) -> Result<()> {
     if !profile.starts_with("--") {
         println!("Error: profile must start with `--`");
         process::exit(1);
@@ -117,16 +130,12 @@ fn handle_build(profile: String) -> Result<()> {
     cwd.pop();
     cwd.pop();
 
-    cwd.push(CONFIG_FILE);
-    let config = Config::from(&cwd).unwrap();
-    cwd.pop();
-
     let link_file = build_sys::link_files(&cwd);
     let link_lib = build_sys::link_lib(&cwd);
-    let opt_flags = build_sys::opt_flags(&profile, &config).unwrap();
+    let opt_flags = build_sys::opt_flags(&profile, config).unwrap();
 
     let compilation_cmd =
-        build_sys::full_compilation_cmd(&config, &profile, &link_file, &link_lib, &opt_flags)
+        build_sys::full_compilation_cmd(config, &profile, &link_file, &link_lib, &opt_flags)
             .unwrap();
 
     let child = process::Command::new(&compilation_cmd[0])

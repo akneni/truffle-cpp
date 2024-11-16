@@ -5,7 +5,7 @@ use std::process::{self, Command};
 
 use anyhow::{anyhow, Result};
 
-#[derive(Debug, Clone, Copy, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
+#[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, clap::ValueEnum)]
 pub enum Language {
     C,
     Cpp,

@@ -1,4 +1,4 @@
-use crate::utils;
+use crate::utils::{self, Language};
 
 use clap::{Parser, Subcommand};
 
@@ -25,7 +25,7 @@ pub enum Commands {
     },
 
     // Clap doesn't provide any way to structure the syntax to be `trufc run --profile
-    // So, we'll have to paese these manually.
+    // So, we'll have to parse these manually.
     Build {
         profile: String,
     },
@@ -54,6 +54,19 @@ impl Commands {
     }
 }
 
+#[allow(unused)]
+fn parse_language(arg: &str) -> Result<Language, &str> {
+    match arg {
+        "c" => Ok(Language::C),
+        "cpp" | "c++" => Ok(Language::Cpp),
+        _ => {
+            println!("Language `{}` is not supported", arg);
+            std::process::exit(1);
+        }
+    }
+}
+
+
 #[derive(Subcommand, Debug)]
 pub enum AiOptCommand {
     ListModels,
@@ -62,3 +75,5 @@ pub enum AiOptCommand {
     },
     Optimize,
 }
+
+

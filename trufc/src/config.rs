@@ -16,6 +16,7 @@ pub struct Config {
 pub struct Project {
     pub name: String,
     pub version: String,
+    pub language: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +51,7 @@ impl Config {
         let project = Project {
             name: proj_name.to_string(),
             version: "0.0.1".to_string(),
+            language: "c".to_string(),
         };
 
         let compiler = Compiler {

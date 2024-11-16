@@ -17,7 +17,10 @@ pub fn create_project(path: &Path, lang: Language) -> Result<()> {
 
     let dir_name = path.file_name().unwrap().to_str().unwrap();
 
-    let config = Config::new(dir_name);
+    let mut config = Config::new(dir_name);
+    if lang == Language::Cpp {
+        config.project.language = "cpp".to_string();
+    }
 
     let config_str = toml::to_string(&config)?;
 
