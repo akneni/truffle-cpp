@@ -4,7 +4,7 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
 #[command(name = "TrufC")]
-#[command(version = "0.0.6")]
+#[command(version = "0.0.7")]
 #[command(about = "A build system that integrates with truffle optimizations.", long_about = None)]
 pub struct CliCommand {
     #[command(subcommand)]

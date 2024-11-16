@@ -6,7 +6,7 @@ use serde::Deserialize;
 use serde_xml_rs;
 use anyhow::Result;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Default, Deserialize)]
 pub struct VgOutput {
     #[serde(rename = "protocolversion", default)]
     pub protocol_version: Option<String>,

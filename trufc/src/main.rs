@@ -10,9 +10,9 @@ mod utils;
 use anyhow::{anyhow, Result};
 use constants::{CONFIG_FILE, SEPETATOR};
 use config::Config;
-use std::{env, fs, process, io::{self, Write}};
+use valgrind::VgOutput;
+use std::{env, fs, process};
 use clap::Parser;
-use crossterm::{execute, ExecutableCommand, cursor, queue, QueueableCommand, style, terminal};
 
 fn main() {
     let cli_args: cli::CliCommand;
@@ -78,20 +78,28 @@ fn main() {
         cli::Commands::Run { profile, args } => {
             let config = config.unwrap();
 
-            let warnings = handle_warnings(&config).unwrap();
+            handle_warnings(&config).unwrap();
             if let Err(e) = handle_build(profile.clone(), &config) {
                 println!("Compilation Failed: {}", e);
                 process::exit(1);
             }
 
             let mut cwd = env::current_dir().unwrap();
-
             cwd.push("build");
             cwd.push(&profile[2..]);
             cwd.push(config.project.name);
 
             let bin = cwd.to_str().unwrap();
-            let valgrind_out = safety::exec_w_valgrind(bin, &args).unwrap();
+            let valgrind_out = match safety::exec_w_valgrind(bin, &args) {
+                Ok(vg) => vg,
+                Err(e) => {
+                    if !e.to_string().to_lowercase().contains("error parsing valgrind") {
+                        eprintln!("Error executing with valgrind");
+                        process::exit(1);
+                    }
+                    VgOutput::default()
+                }
+            };
 
             if valgrind_out.errors.len() > 0 {
                 println!("{}\n", *SEPETATOR);

@@ -26,6 +26,7 @@ Key areas currently being worked on:
 ## Quick Start
 - You will interact with Truffle using TrufC. Download TrufC using the following script. Change `--user` to `--system` to install TrufC system wide. 
 ```bash
+sudo apt install valgrind -y
 curl https://raw.githubusercontent.com/akneni/truffle/refs/heads/main/trufc/scripts/install.py -o install.py
 python3 install.py --user
 ```

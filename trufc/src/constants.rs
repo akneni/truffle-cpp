@@ -1,6 +1,7 @@
 use crate::utils::expand_user;
 use std::{env::consts::OS, path::{Path, PathBuf}};
 use once_cell::sync::Lazy;
+use colored::*;
 
 pub const CONFIG_FILE: &str = "TrufC.toml";
 pub const VALGRIND_OUT: &str = "trufc-valgrind-output.xml";
@@ -41,6 +42,6 @@ pub static DATA_DIR: Lazy<PathBuf> = Lazy::new(|| {
     panic!("OS `{}` not supported", OS);
 });
 
-pub static SEPETATOR: Lazy<String> = Lazy::new(|| {
-    "=".repeat(40)
+pub static SEPETATOR: Lazy<ColoredString> = Lazy::new(|| {
+    "✦ ═════════════════════════════════ ⚔ ═════════════════════════════════ ✦".to_string().blue().bold()
 });

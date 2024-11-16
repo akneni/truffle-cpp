@@ -3,6 +3,9 @@ use anyhow::{anyhow, Result};
 
 use crate::{constants::VALGRIND_OUT, utils, valgrind::VgOutput};
 
+/// This checks if unsafe functions exist within a line using general string parsing
+/// This is messy and prone to false positives.
+/// TODO: Create a lexer to better perform static analysis
 struct FunctionMap {
     map: HashMap<String, String>,
 }
@@ -145,15 +148,11 @@ fn scan_file(filename: &str, source_code: &str, func_map: &FunctionMap) ->Vec<Wa
     warnings
 }
 
-
 /// Executes a binary (merges Stdio to the current process) and
 /// returns a string of Valgrind's results and the number of lines
 /// output by the underlying program
 pub fn exec_w_valgrind(bin_path: &str, passthough_args: &Vec<String>) -> Result<VgOutput> {
-    
-    // let log_file = format!("--log-file={}", VALGRIND_OUT);
     let log_file = format!("--xml-file={}", VALGRIND_OUT);
-
     let mut valgrind_args = vec![
         &log_file, 
         "--leak-check=full",
