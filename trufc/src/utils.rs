@@ -12,6 +12,30 @@ pub enum Language {
     Cpp,
 }
 
+impl Language {
+    pub fn new(mut s: &str) -> Result<Self> {
+        if s.starts_with("--") {
+            s = &s[2..];
+        }
+        else if s.starts_with(".") {
+            s = &s[1..];
+        }
+        let s = s.to_lowercase();
+        match s.as_str() {
+            "c" => Ok(Language::C),
+            "cpp" => Ok(Language::Cpp),
+            _ => Err(anyhow!("string not valid")),
+        }
+    }
+
+    pub fn file_ext(&self) -> &'static str {
+        match self {
+            Self::C => ".c",
+            Self::Cpp => ".cpp",
+        }
+    }
+}
+
 #[allow(unused)]
 #[derive(Debug, Default, Clone)]
 pub struct CompilerVersions {

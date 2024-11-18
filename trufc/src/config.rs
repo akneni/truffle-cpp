@@ -17,6 +17,7 @@ pub struct Project {
     pub name: String,
     pub version: String,
     pub language: String,
+    pub use_valgrind: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -52,6 +53,7 @@ impl Config {
             name: proj_name.to_string(),
             version: "0.0.1".to_string(),
             language: "c".to_string(),
+            use_valgrind: true,
         };
 
         let compiler = Compiler {

@@ -47,21 +47,26 @@ pub fn create_project(path: &Path, lang: Language) -> Result<()> {
     Ok(())
 }
 
-pub fn link_files(path: &Path) -> Vec<String> {
-    let mut path = path.to_path_buf();
-    path.push("src");
+
+/// Links all the files in the project together
+pub fn link_files(proj_dir: &Path, language: Language) -> Result<Vec<String>> {
+    let source_dir = proj_dir.join("src");
 
     let mut c_files = vec![];
+    let source_dir_iter = fs::read_dir(&source_dir)
+        .map_err(|err| anyhow!("Failed to iterate over source dir {:?}c: {}", source_dir, err))?;
 
-    for file in fs::read_dir(&path).unwrap() {
+    for file in source_dir_iter {
         if let Ok(file) = file {
             let file = file.file_name();
             let filename = file.to_str().unwrap();
-            c_files.push(format!("src/{}", filename));
+            if filename.ends_with(language.file_ext()) {
+                c_files.push(format!("src/{}", filename));
+            }
         }
     }
 
-    c_files
+    Ok(c_files)
 }
 
 pub fn link_lib(path: &Path) -> Vec<String> {
@@ -94,12 +99,6 @@ pub fn link_lib(path: &Path) -> Vec<String> {
 }
 
 pub fn opt_flags(profile: &str, config: &Config) -> Result<Vec<String>> {
-    // if profile == "--dev" {
-    //     return Ok(vec!["-g".to_string(), "-O0".to_string(), "-Wall".to_string(), "-fsanitize=undefined".to_string()]);
-    // }
-    // else if profile == "--release" {
-    //     return Ok(vec!["-O3".to_string(), "-funroll-loops".to_string(), "-fprefetch-loop-arrays".to_string(), "-march=native".to_string(), "-ffast-math".to_string()]);
-    // }
     let profile = &profile[2..];
 
     if let Some(prof) = config.profile.get(profile) {
@@ -144,4 +143,23 @@ pub fn full_compilation_cmd(
     command.extend_from_slice(link_lib);
 
     Ok(command)
+}
+
+pub fn validate_proj_repo(path: &Path) -> Result<()>{
+    let config = path.join(CONFIG_FILE);
+    if !config.exists() {
+        return Err(anyhow!("Invalid Project Directory: config file `{}` doesn't exist.", CONFIG_FILE));
+    }
+    else if !config.is_file() {
+        return Err(anyhow!("Invalid Project Directory: `{}` is not a file.", CONFIG_FILE));
+    } 
+    
+    let source_dir = path.join("src");
+    if !source_dir.exists() {
+        return Err(anyhow!("Invalid Project Directory: source code directory `src/` doesn't exist."));
+    }
+    else if !source_dir.is_dir() {
+        return Err(anyhow!("Invalid Project Directory: `src` is not a directory."));
+    }
+    Ok(())
 }

@@ -173,13 +173,20 @@ pub fn exec_w_valgrind(bin_path: &str, passthough_args: &Vec<String>) -> Result<
         .output()
         .map_err(|e| anyhow!("Failed to run valgrind binary: {}", e));
 
-    if let Err(e) = output {
-        println!("Error spawning valgrind process: {}", e);
-        println!("Make sure you have valgrind installed");
-        println!("Debian Based  => sudo apt-get install valgrind");
-        println!("Arch Based    => sudo dnf install valgrind");
-        println!("Fedora Based  => sudo pacman -S valgrind");
-        std::process::exit(1);
+    let output = match output {
+        Ok(o) => o,
+        Err(e) => {
+            println!("Error spawning valgrind process: {}", e);
+            println!("Make sure you have valgrind installed");
+            println!("Debian Based  => sudo apt-get install valgrind");
+            println!("Arch Based    => sudo dnf install valgrind");
+            println!("Fedora Based  => sudo pacman -S valgrind");
+            std::process::exit(1);
+        }
+    };
+    if !output.status.success() {
+        let code = output.status.code().unwrap_or(1);
+        process::exit(code);
     }
 
     let valgrind_out = fs::read_to_string(VALGRIND_OUT)
