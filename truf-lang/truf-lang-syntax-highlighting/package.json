@@ -1,0 +1,27 @@
+{
+  "name": "truffle-syntax-highlighting",
+  "displayName": "Truffle Syntax Highlighting",
+  "version": "0.0.1",
+  "publisher": "akneni",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "truffle",
+        "extensions": [".truffle", ".trf"],
+        "aliases": ["Truffle", "truffle"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "truffle",
+        "scopeName": "source.truffle",
+        "path": "./syntaxes/truffle.tmLanguage.json"
+      }
+    ]
+  }
+}
